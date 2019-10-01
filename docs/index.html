@@ -1,1 +1,89 @@
-Hello
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>A simple IOT example</title>
+
+  <!--Faveicon handling-->
+  <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+  <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+  <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+  <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="msapplication-TileColor" content="#ffffff">
+  <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+  <meta name="theme-color" content="#ffffff">
+
+  <!--CSS help-->
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <link rel="stylesheet" href="https://www.w3schools.com/lib/w3-theme-indigo.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.css"
+    integrity="sha256-46qynGAkLSFpVbEBog43gvNhfrOj+BmwXdxFgVK/Kvc=" crossorigin="anonymous" />
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
+  <!--Redirect to a correct page-->
+  <script>
+    if (window.location.hostname !== "github.skgadi.com" && window.location.hostname !== "localhost")
+      window.location.href = "https://github.skgadi.com/iot/";
+  </script>
+  <style>
+    .w3-input {
+      outline-width: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <a class="github-fork-ribbon" href="https://github.com/skgadi/iot" data-ribbon="Code @ GitHub"
+    title="Code @ GitHub">Code @ GitHub</a>
+  <header class="w3-container w3-theme w3-padding">
+    <span><img src="/android-icon-192x192.png" height="64px;"></span>
+    <span class="w3-xlarge">Simple IOT example</span>
+  </header>
+  <div id="app" class="w3-row">
+    <div class="w3-col l4 m6 s12 w3-border w3-border-theme">
+      <div class="w3-theme-d2"><div class="w3-padding w3-large">Connect device</div></div>
+      <div class="w3-padding">
+        <label>Device ID</label>
+        <div class="w3-row">
+          <div class="w3-col s11">
+            <input class="w3-input w3-border w3-border-theme" type="text">
+          </div>
+          <div class="w3-col s1">
+            <div href="#" class="w3-button w3-ripple w3-block w3-theme-d1 w3-hover-theme w3-border-theme w3-border"
+              style="padding: 8px 0;"><i class="fas fa-plug"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="connected" class="w3-col l4 m6 s12 w3-border w3-padding w3-border-theme">
+      asdf
+    </div>
+    <div v-if="connected" class="w3-col l4 m6 s12 w3-border w3-padding w3-border-theme">
+      asdf
+    </div>
+
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script>
+    var app = new Vue({
+      el: '#app',
+      data: {
+        message: 'Hello Vue!',
+        connected: false,
+      }
+    })
+  </script>
+</body>
+
+</html>
