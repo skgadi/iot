@@ -15,8 +15,8 @@
 #include <WiFi.h>
 #include <FirebaseESP32.h>
 
-#define WIFI_SSID "ELSUPER"
-#define WIFI_PASSWORD "8711843550"
+#define WIFI_SSID "IOTFIME2019"
+#define WIFI_PASSWORD "EAFTUxgWt8aYw44M"
 #define FIREBASE_HOST "skgadi-basic-iot.firebaseio.com" //Do not include https:// in FIREBASE_HOST
 #define FIREBASE_AUTH "Ltergx9zqW7ZUDDpy7uBFyuqgthg2zq3585ZNlLf"
 
@@ -29,7 +29,7 @@ void setup()
 {
   
 
-    String Device_ID = "FIME20190001";
+    String Device_ID = "FIME20190002";
 
 
     Serial.begin(115200);
