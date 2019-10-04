@@ -12,10 +12,22 @@ FirebaseJson sendData;
 String path;
 
 
-
+void readNSetLEDValues();
+void createLEDsJsonOnServer();
+void writeSensorsData();
 
 //Please put your device ID
 String Device_ID = "FIME20190002";
+
+
+
+uint8_t LEDs[3] = {0, 0, 0};
+uint8_t POT = 23;
+uint8_t LDR = 23;
+uint8_t Touch = 23;
+float Temp = 23;
+float Humidity = 23;
+uint32_t ite = 0;
 
 
 
@@ -46,12 +58,41 @@ void setup()
 }
 void loop()
 {
-  if (Firebase.getJSON(firebaseData, path+"/led/r")) {
-    Serial.println(firebaseData.intData());
-  } else {
-    sendData.clear().addInt("r",0);
-    Firebase.setJSON(firebaseData, path+"/led", sendData);
-    Serial.println("Setting R to zero.");
-  }
+  readNSetLEDValues();
+  writeSensorsData();
   delay(5000);
+}
+
+void createLEDsJsonOnServer() {
+  sendData.clear();
+  for (int i=0; i<3; i++) {
+    sendData.addInt(String(i),0);
+  }
+  Firebase.setJSON(firebaseData, path+"/led", sendData);
+}
+
+void readNSetLEDValues() {
+  for (int i=0; i<3; i++) {
+    String PathString = path+"/led/"+String(i);
+    if (Firebase.getInt(firebaseData, PathString)) {
+      LEDs[i] = firebaseData.intData();
+      Serial.println(LEDs[i]);
+    } else {
+      Serial.println("Error reading at: " + PathString + ". Resetting server LEDs.");
+      createLEDsJsonOnServer();
+      return;
+    }    
+  }
+}
+
+void writeSensorsData() {
+  ite++;
+  sendData.clear()
+  .addInt("i",ite)
+  .addInt("pot", POT+ite)
+  .addInt("ldr", LDR+ite*2)
+  .addInt("touch", Touch + 3*ite)
+  .addDouble("temp", Temp*0.5)
+  .addDouble("humidity", Humidity*1.5);
+  Firebase.setJSON(firebaseData, path+"/sensors", sendData);  
 }
