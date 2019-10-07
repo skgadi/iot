@@ -53,6 +53,9 @@
     input[type="color"]::-webkit-color-swatch {
       border: none;
     }
+    table {
+      margin: auto !important;
+    }
   </style>
 </head>
 
@@ -60,7 +63,7 @@
   <a class="github-fork-ribbon" href="https://github.com/skgadi/iot" data-ribbon="Code @ GitHub"
     title="Code @ GitHub">Code @ GitHub</a>
   <header class="w3-container w3-theme w3-padding" style="margin-bottom: 20px;">
-    <span><img src="/android-icon-192x192.png" height="64px;"></span>
+    <span><img src="android-icon-192x192.png" height="64px;"></span>
     <span class="w3-xlarge">Simple IOT example</span>
   </header>
   <div id="app" class="w3-row">
@@ -85,7 +88,15 @@
         </div>
       </div>
     </div>
-    <div v-if="!!connected" class="w3-col l4 m6 s12 w3-border w3-border-theme">
+    <div v-show="connected && !deviceAvail" class="w3-col l4 m6 s12 w3-border w3-border-theme">
+      <div class="w3-theme-d2">
+        <div class="w3-padding w3-large">Device not available</div>
+      </div>
+      <div class="w3-padding">
+        <div>The selected device is not available. Please make sure your id is correct.</div>
+      </div>
+    </div>
+    <div v-show="connected && deviceAvail" class="w3-col l4 m6 s12 w3-border w3-border-theme">
       <div class="w3-theme-d2">
         <div class="w3-padding w3-large">LED color</div>
       </div>
@@ -94,13 +105,12 @@
         <input class="w3-block" type="color" style="height: 40px;" v-model="LEDColor" @change="updateLEDsOnServer">
       </div>
     </div>
-    <div v-if="!!connected" class="w3-col l4 m6 s12 w3-border w3-border-theme">
+    <div v-show="connected && deviceAvail" class="w3-col l4 m6 s12 w3-border w3-border-theme">
       <div class="w3-theme-d2">
-        <div class="w3-padding w3-large">LED color</div>
+        <div class="w3-padding w3-large">Temperature</div>
       </div>
       <div class="w3-padding">
-        <label>Current value: {{fbData.sensors.touch}}</label>
-        <input class="w3-block" type="color" style="height: 40px;" v-model="LEDColor" @change="updateLEDsOnServer">
+        <div class="w3-center"><div id="gauge_div"></div></div>
       </div>
     </div>
 
@@ -115,6 +125,7 @@
         deviceID: "FIME20190002",
         connected: false,
         LEDColor: "#ffffff",
+        deviceAvail: false
       },
       watch: {},
       methods: {
@@ -147,8 +158,15 @@
             } else {
               starCountRef = firebase.database().ref('Devices/' + this.deviceID)
               starCountRef.on('value', function (snapshot) {
-                app.$set(app.$data, "fbData", snapshot.val());
-                app.setLEDColor();
+                if (snapshot.exists()) {
+                  app.$set(app.$data, "fbData", snapshot.val());
+                  app.setLEDColor();
+                  app.$set(app.$data, 'deviceAvail', true);
+                  gaugeData.setValue(0, 0, app.$data.fbData.sensors.temp);
+                  gauge.draw(gaugeData, gaugeOptions);
+                } else {
+                  app.$set(app.$data, 'deviceAvail', false);
+                }
               });
               this.connected = true;
             }
@@ -182,6 +200,26 @@
     var database = firebase.database();
     var starCountRef;
   </script>
+
+<script type="text/javascript">
+  google.charts.load('current', {'packages':['gauge']});
+    google.charts.setOnLoadCallback(drawGauge);
+
+    var gaugeOptions = {min: 0, max: 100, yellowFrom: 40, yellowTo: 50,
+      redFrom: 50, redTo: 100, minorTicks: 5};
+    var gauge;
+
+    function drawGauge() {
+      gaugeData = new google.visualization.DataTable();
+      gaugeData.addColumn('number', 'Temperature');
+      gaugeData.addRows(1);
+      gaugeData.setCell(0, 0, 0);
+
+      gauge = new google.visualization.Gauge(document.getElementById('gauge_div'));
+      gauge.draw(gaugeData, gaugeOptions);
+    }
+
+</script>
 </body>
 
 </html>
