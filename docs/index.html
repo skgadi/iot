@@ -68,58 +68,234 @@
     <span><img src="android-icon-192x192.png" height="64px;"></span>
     <span class="w3-xlarge">IOT example</span>
   </header>
-  <div id="app" class="w3-row">
-    <div class="w3-col l6 m6 s12 w3-border w3-border-theme">
-      <div class="w3-theme-d2">
-        <div class="w3-padding w3-large">Connect device</div>
-      </div>
-      <div class="w3-padding">
-        <label>Device ID</label>
-        <div class="w3-row">
-          <div class="w3-col s11">
-            <input class="w3-input w3-border w3-border-theme" v-model="deviceID" type="text" :disabled="connected">
-          </div>
-          <div class="w3-col s1">
-            <div href="#" @click="connect"
-              class="w3-button w3-ripple w3-block  w3-hover-theme w3-border-theme w3-border"
-              :class="connected ? 'w3-red': 'w3-green'" style="padding: 8px 0;">
-              <div v-if="connected"><i class="fas fa-times"></i></div>
-              <div v-else><i class="fas fa-check"></i></div>
+  <div id="app">
+    <div class="w3-row">
+      <div class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Connect device</div>
+        </div>
+        <div class="w3-padding">
+          <label>Device ID</label>
+          <div class="w3-row">
+            <div class="w3-col s11">
+              <input class="w3-input w3-border w3-border-theme" v-model="deviceID" type="text" :disabled="connected">
+            </div>
+            <div class="w3-col s1">
+              <div href="#" @click="connect"
+                class="w3-button w3-ripple w3-block  w3-hover-theme w3-border-theme w3-border"
+                :class="connected ? 'w3-red': 'w3-green'" style="padding: 8px 0;">
+                <div v-if="connected"><i class="fas fa-times"></i></div>
+                <div v-else><i class="fas fa-check"></i></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-    <div v-show="connected && !deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
-      <div class="w3-theme-d2">
-        <div class="w3-padding w3-large">Device not available</div>
+      <div v-show="connected && !deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Device not available</div>
+        </div>
+        <div class="w3-padding">
+          <div>The selected device is not available. Please make sure your id is correct.</div>
+        </div>
       </div>
-      <div class="w3-padding">
-        <div>The selected device is not available. Please make sure your id is correct.</div>
-      </div>
-    </div>
-    <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
-      <div class="w3-theme-d2">
-        <div class="w3-padding w3-large">LED color</div>
-      </div>
-      <div class="w3-padding">
-        <label>Select color</label>
-        <input class="w3-block" type="color" style="height: 40px;" v-model="LEDColor" @change="updateLEDsOnServer">
-      </div>
-    </div>
-    <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
-      <div class="w3-theme-d2">
-        <div class="w3-padding w3-large">Temperature</div>
-      </div>
-      <div class="w3-padding">
-        <div id="gaugeTemp" class="centerTable"></div>
-        <div id="chartTemp" style="width: 100%!important;"></div>
+      <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">LED color</div>
+        </div>
+        <div class="w3-padding">
+          <label>Select color</label>
+          <input class="w3-block" type="color" style="height: 40px;" v-model="LEDColor" @change="updateLEDsOnServer">
+        </div>
       </div>
     </div>
-
+    <div class="w3-row">
+      <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Temperature</div>
+        </div>
+        <div class="w3-padding">
+          <div id="gauge-temp" class="centerTable"></div>
+          <div id="chart-temp" style="width: 100%!important;"></div>
+        </div>
+      </div>
+      <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Humidity</div>
+        </div>
+        <div class="w3-padding">
+          <div id="gauge-humidity" class="centerTable"></div>
+          <div id="chart-humidity" style="width: 100%!important;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w3-row">
+      <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Light detecting resistance</div>
+        </div>
+        <div class="w3-padding">
+          <div id="gauge-ldr" class="centerTable"></div>
+          <div id="chart-ldr" style="width: 100%!important;"></div>
+        </div>
+      </div>
+      <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Potentiometer</div>
+        </div>
+        <div class="w3-padding">
+          <div id="gauge-pot" class="centerTable"></div>
+          <div id="chart-pot" style="width: 100%!important;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="w3-row">
+      <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Touch sensor</div>
+        </div>
+        <div class="w3-padding">
+          <div id="gauge-touch" class="centerTable"></div>
+          <div id="chart-touch" style="width: 100%!important;"></div>
+        </div>
+      </div>
+      <!--div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
+        <div class="w3-theme-d2">
+          <div class="w3-padding w3-large">Humidity</div>
+        </div>
+        <div class="w3-padding">
+          <div id="gauge-humidity" class="centerTable"></div>
+          <div id="chart-humidity" style="width: 100%!important;"></div>
+        </div>
+      </div-->
+    </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+
+
+  <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-analytics.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-database.js"></script>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyAov9Y8GpIzNB3DIlPnd9Waydw2R1Z3_34",
+      authDomain: "skgadi-basic-iot.firebaseapp.com",
+      databaseURL: "https://skgadi-basic-iot.firebaseio.com",
+      projectId: "skgadi-basic-iot",
+      storageBucket: "skgadi-basic-iot.appspot.com",
+      messagingSenderId: "318050979439",
+      appId: "1:318050979439:web:a6d43b571973dbd9b7879a",
+      measurementId: "G-JHFN5VCSKD"
+    };
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+  </script>
+  <script>
+    var database = firebase.database();
+    var starCountRef;
+  </script>
+
+  <script type="text/javascript">
+    google.charts.load('current', {
+      'packages': ['gauge', 'corechart']
+    });
+    google.charts.setOnLoadCallback(prepareSensorsView);
+    var tempitemmmm;
+
+    var availableSensors = [
+      ["temp", "Temperature", [0, 100]],
+      ["humidity", "Humidity", [0, 100]],
+      ["ldr", "LDR", [0, 4095]],
+      ["pot", "POT", [0, 4095]],
+      ["touch", "Touch", [0, 100]]
+    ];
+    var sensorHandles = {};
+
+    function prepareSensorsView() {
+      availableSensors.forEach((item) => {
+        sensorHandles[item[0]] = new sensor(item[0], item[1], "gauge-" + item[0], "chart-" + item[0], item[2]);
+      });
+
+    }
+
+    function resetAllSensors() {
+      Object.keys(sensorHandles).forEach((item) => {
+        console.log(item);
+        sensorHandles[item].resetView();
+      });
+
+    }
+
+    function sensor(id, name, gDiv, cDiv, gOptions) {
+      this.id = id;
+      var gaugeDiv = gDiv;
+      var chartDiv = cDiv;
+      var gaugeOptions = {
+        min: gOptions[0],
+        max: gOptions[1],
+        minorTicks: 5
+      };
+      var gaugeData = new google.visualization.DataTable();
+      gaugeData.addColumn('number', name);
+      gaugeData.addRows(1);
+      gaugeData.setCell(0, 0, 0);
+      var gauge = new google.visualization.Gauge(document.getElementById(gaugeDiv));
+      gauge.draw(gaugeData, gaugeOptions);
+
+      var chartData = new google.visualization.DataTable();
+      chartData.addColumn('timeofday', 'Time');
+      chartData.addColumn('number', name);
+      var chart = new google.visualization.LineChart(document.getElementById(chartDiv));
+      var getChartOptions = function () {
+        return {
+          legend: "in",
+          chartArea: {
+            right: 5,
+            left: 50,
+            top: 25,
+            bottom: 50,
+          },
+          hAxis: {
+            title: 'Time (t)'
+          },
+          explorer: {
+            actions: ['dragToZoom', 'rightClickToReset'],
+          },
+          backgroundColor: {
+            fill: 'transparent'
+          },
+          height: 0.8 * window.innerHeight,
+          width: document.getElementById(chartDiv).offsetWidth
+        }
+      }
+      chart.draw(chartData, getChartOptions());
+      this.resetView = function () {
+        gaugeData.setValue(0, 0, 0)
+        var chartRows = chartData.getNumberOfRows();
+        chartData.removeRows(0, chartRows);
+        gauge.draw(gaugeData, gaugeOptions);
+        chart.draw(chartData, getChartOptions());
+      }
+      this.updateSensor = function (value) {
+        gaugeData.setValue(0, 0, value);
+        gauge.draw(gaugeData, gaugeOptions);
+        chartData.addRow([
+          [new Date().getHours(), new Date().getMinutes(), new Date().getSeconds(), new Date().getMilliseconds()],
+          value
+        ]);
+        var chartRows = chartData.getNumberOfRows();
+        if (chartRows > 200) chartData.removeRows(0, 1);
+        chart.draw(chartData, getChartOptions());
+      }
+      this.reloadItems = function () {
+        gauge.draw(gaugeData, gaugeOptions);
+        chart.draw(chartData, getChartOptions());
+      }
+    }
+  </script>
   <script>
     var app = new Vue({
       el: '#app',
@@ -160,12 +336,17 @@
               starCountRef.off();
               this.connected = false;
             } else {
+              resetAllSensors();
               starCountRef = firebase.database().ref('Devices/' + this.deviceID)
               starCountRef.on('value', function (snapshot) {
                 if (snapshot.exists()) {
                   app.$set(app.$data, "fbData", snapshot.val());
                   app.setLEDColor();
                   app.$set(app.$data, 'deviceAvail', true);
+                  Object.keys(sensorHandles).forEach((item) => {
+                    console.log(item);
+                    sensorHandles[item].updateSensor(app.$data.fbData.sensors[item]);
+                  });
                 } else {
                   app.$set(app.$data, 'deviceAvail', false);
                 }
@@ -178,112 +359,6 @@
     })
   </script>
 
-
-
-  <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-analytics.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-database.js"></script>
-
-  <script>
-    var firebaseConfig = {
-      apiKey: "AIzaSyAov9Y8GpIzNB3DIlPnd9Waydw2R1Z3_34",
-      authDomain: "skgadi-basic-iot.firebaseapp.com",
-      databaseURL: "https://skgadi-basic-iot.firebaseio.com",
-      projectId: "skgadi-basic-iot",
-      storageBucket: "skgadi-basic-iot.appspot.com",
-      messagingSenderId: "318050979439",
-      appId: "1:318050979439:web:a6d43b571973dbd9b7879a",
-      measurementId: "G-JHFN5VCSKD"
-    };
-    firebase.initializeApp(firebaseConfig);
-    firebase.analytics();
-  </script>
-  <script>
-    var database = firebase.database();
-    var starCountRef;
-  </script>
-
-  <script type="text/javascript">
-    google.charts.load('current', {
-      'packages': ['gauge', 'corechart']
-    });
-    google.charts.setOnLoadCallback(prepareSensorsView);
-    var tempitemmmm;
-
-    function prepareSensorsView() {
-      var tempSensorView = new sensor("temp", "Temperature", "gaugeTemp", "chartTemp", [0, 100]);
-      tempitemmmm = tempSensorView;
-
-    }
-
-    function sensor(id, name, gDiv, cDiv, gOptions) {
-      this.id = id;
-      var gaugeDiv = gDiv;
-      var chartDiv = cDiv;
-      var gaugeOptions = {
-        min: gOptions[0],
-        max: gOptions[1],
-        minorTicks: 5
-      };
-      var gaugeData = new google.visualization.DataTable();
-      gaugeData.addColumn('number', name);
-      gaugeData.addRows(1);
-      gaugeData.setCell(0, 0, 0);
-      var gauge = new google.visualization.Gauge(document.getElementById(gaugeDiv));
-      gauge.draw(gaugeData, gaugeOptions);
-
-      var chartData = new google.visualization.DataTable();
-      chartData.addColumn('timeofday', 'Time');
-      chartData.addColumn('number', name);
-      var chart = new google.visualization.LineChart(document.getElementById(chartDiv));
-      var getChartOptions = function () {
-        return {
-          legend: "in",
-          chartArea: {
-            right: 15,
-            left: 35,
-            top: 25,
-            bottom: 50,
-          },
-          hAxis: {
-            title: 'Time (t)'
-          },
-          explorer: {
-            actions: ['dragToZoom', 'rightClickToReset'],
-          },
-          backgroundColor: {
-            fill: 'transparent'
-          },
-          height: 0.8 * window.innerHeight,
-          width: document.getElementById(chartDiv).offsetWidth
-        }
-      }
-      console.log(getChartOptions());
-      chart.draw(chartData, getChartOptions());
-      this.resetView = function () {
-        gaugeData.setValue(0, 0, 0)
-        var chartRows = chartData.getNumberOfRows();
-        chartData.removeRows(0, chartRows);
-        gauge.draw(gaugeData, gaugeOptions);
-        chart.draw(chartData, getChartOptions());
-      }
-      this.updateSensor = function (value) {
-        gaugeData.setValue(0, 0, value);
-        gauge.draw(gaugeData, gaugeOptions);
-        chartData.addRow([
-          [new Date().getHours(), new Date().getMinutes(), new Date().getSeconds(), new Date().getMilliseconds()],
-          value
-        ]);
-        var chartRows = chartData.getNumberOfRows();
-        if (chartRows>200) chartData.removeRows(0,1);
-        chart.draw(chartData, getChartOptions());
-      }
-      this.reloadItems = function () {
-        gauge.draw(gaugeData, gaugeOptions);
-        chart.draw(chartData, getChartOptions());
-      }
-    }
-  </script>
 </body>
 
 </html>

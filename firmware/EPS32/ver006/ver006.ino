@@ -3,9 +3,9 @@
 #include "DHTesp.h"
 /*#define WIFI_SSID "Souji"
 #define WIFI_PASSWORD "sur12345"/**/
-/*#define WIFI_SSID "ELSUPER"
+#define WIFI_SSID "ELSUPER"
 #define WIFI_PASSWORD "8711843550"/**/
-#define WIFI_SSID "IOTFIME2019"
+/*#define WIFI_SSID "IOTFIME2019"
 #define WIFI_PASSWORD "EAFTUxgWt8aYw44M"/**/
 #define FIREBASE_HOST "skgadi-basic-iot.firebaseio.com"
 #define FIREBASE_AUTH "Ltergx9zqW7ZUDDpy7uBFyuqgthg2zq3585ZNlLf"
