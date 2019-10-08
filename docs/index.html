@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>A simple IOT example</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!--Faveicon handling-->
   <link rel="apple-touch-icon" sizes="57x57" href="apple-icon-57x57.png">
@@ -53,7 +54,8 @@
     input[type="color"]::-webkit-color-swatch {
       border: none;
     }
-    table {
+
+    .centerTable>table {
       margin: auto !important;
     }
   </style>
@@ -64,10 +66,10 @@
     title="Code @ GitHub">Code @ GitHub</a>
   <header class="w3-container w3-theme w3-padding" style="margin-bottom: 20px;">
     <span><img src="android-icon-192x192.png" height="64px;"></span>
-    <span class="w3-xlarge">Simple IOT example</span>
+    <span class="w3-xlarge">IOT example</span>
   </header>
   <div id="app" class="w3-row">
-    <div class="w3-col l4 m6 s12 w3-border w3-border-theme">
+    <div class="w3-col l6 m6 s12 w3-border w3-border-theme">
       <div class="w3-theme-d2">
         <div class="w3-padding w3-large">Connect device</div>
       </div>
@@ -88,7 +90,7 @@
         </div>
       </div>
     </div>
-    <div v-show="connected && !deviceAvail" class="w3-col l4 m6 s12 w3-border w3-border-theme">
+    <div v-show="connected && !deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
       <div class="w3-theme-d2">
         <div class="w3-padding w3-large">Device not available</div>
       </div>
@@ -96,7 +98,7 @@
         <div>The selected device is not available. Please make sure your id is correct.</div>
       </div>
     </div>
-    <div v-show="connected && deviceAvail" class="w3-col l4 m6 s12 w3-border w3-border-theme">
+    <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
       <div class="w3-theme-d2">
         <div class="w3-padding w3-large">LED color</div>
       </div>
@@ -105,12 +107,13 @@
         <input class="w3-block" type="color" style="height: 40px;" v-model="LEDColor" @change="updateLEDsOnServer">
       </div>
     </div>
-    <div v-show="connected && deviceAvail" class="w3-col l4 m6 s12 w3-border w3-border-theme">
+    <div v-show="connected && deviceAvail" class="w3-col l6 m6 s12 w3-border w3-border-theme">
       <div class="w3-theme-d2">
         <div class="w3-padding w3-large">Temperature</div>
       </div>
       <div class="w3-padding">
-        <div class="w3-center"><div id="gauge_div"></div></div>
+        <div id="gaugeTemp" class="centerTable"></div>
+        <div id="chartTemp" style="width: 100%!important;"></div>
       </div>
     </div>
 
@@ -125,7 +128,8 @@
         deviceID: "FIME20190002",
         connected: false,
         LEDColor: "#ffffff",
-        deviceAvail: false
+        deviceAvail: false,
+        sensrosView: {}
       },
       watch: {},
       methods: {
@@ -162,8 +166,6 @@
                   app.$set(app.$data, "fbData", snapshot.val());
                   app.setLEDColor();
                   app.$set(app.$data, 'deviceAvail', true);
-                  gaugeData.setValue(0, 0, app.$data.fbData.sensors.temp);
-                  gauge.draw(gaugeData, gaugeOptions);
                 } else {
                   app.$set(app.$data, 'deviceAvail', false);
                 }
@@ -201,25 +203,87 @@
     var starCountRef;
   </script>
 
-<script type="text/javascript">
-  google.charts.load('current', {'packages':['gauge']});
-    google.charts.setOnLoadCallback(drawGauge);
+  <script type="text/javascript">
+    google.charts.load('current', {
+      'packages': ['gauge', 'corechart']
+    });
+    google.charts.setOnLoadCallback(prepareSensorsView);
+    var tempitemmmm;
 
-    var gaugeOptions = {min: 0, max: 100, yellowFrom: 40, yellowTo: 50,
-      redFrom: 50, redTo: 100, minorTicks: 5};
-    var gauge;
+    function prepareSensorsView() {
+      var tempSensorView = new sensor("temp", "Temperature", "gaugeTemp", "chartTemp", [0, 100]);
+      tempitemmmm = tempSensorView;
 
-    function drawGauge() {
-      gaugeData = new google.visualization.DataTable();
-      gaugeData.addColumn('number', 'Temperature');
-      gaugeData.addRows(1);
-      gaugeData.setCell(0, 0, 0);
-
-      gauge = new google.visualization.Gauge(document.getElementById('gauge_div'));
-      gauge.draw(gaugeData, gaugeOptions);
     }
 
-</script>
+    function sensor(id, name, gDiv, cDiv, gOptions) {
+      this.id = id;
+      var gaugeDiv = gDiv;
+      var chartDiv = cDiv;
+      var gaugeOptions = {
+        min: gOptions[0],
+        max: gOptions[1],
+        minorTicks: 5
+      };
+      var gaugeData = new google.visualization.DataTable();
+      gaugeData.addColumn('number', name);
+      gaugeData.addRows(1);
+      gaugeData.setCell(0, 0, 0);
+      var gauge = new google.visualization.Gauge(document.getElementById(gaugeDiv));
+      gauge.draw(gaugeData, gaugeOptions);
+
+      var chartData = new google.visualization.DataTable();
+      chartData.addColumn('timeofday', 'Time');
+      chartData.addColumn('number', name);
+      var chart = new google.visualization.LineChart(document.getElementById(chartDiv));
+      var getChartOptions = function () {
+        return {
+          legend: "in",
+          chartArea: {
+            right: 15,
+            left: 35,
+            top: 25,
+            bottom: 50,
+          },
+          hAxis: {
+            title: 'Time (t)'
+          },
+          explorer: {
+            actions: ['dragToZoom', 'rightClickToReset'],
+          },
+          backgroundColor: {
+            fill: 'transparent'
+          },
+          height: 0.8 * window.innerHeight,
+          width: document.getElementById(chartDiv).offsetWidth
+        }
+      }
+      console.log(getChartOptions());
+      chart.draw(chartData, getChartOptions());
+      this.resetView = function () {
+        gaugeData.setValue(0, 0, 0)
+        var chartRows = chartData.getNumberOfRows();
+        chartData.removeRows(0, chartRows);
+        gauge.draw(gaugeData, gaugeOptions);
+        chart.draw(chartData, getChartOptions());
+      }
+      this.updateSensor = function (value) {
+        gaugeData.setValue(0, 0, value);
+        gauge.draw(gaugeData, gaugeOptions);
+        chartData.addRow([
+          [new Date().getHours(), new Date().getMinutes(), new Date().getSeconds(), new Date().getMilliseconds()],
+          value
+        ]);
+        var chartRows = chartData.getNumberOfRows();
+        if (chartRows>200) chartData.removeRows(0,1);
+        chart.draw(chartData, getChartOptions());
+      }
+      this.reloadItems = function () {
+        gauge.draw(gaugeData, gaugeOptions);
+        chart.draw(chartData, getChartOptions());
+      }
+    }
+  </script>
 </body>
 
 </html>
