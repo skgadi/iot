@@ -15,17 +15,24 @@ FirebaseJson sendData;
 String path;
 
 
-void readNSetLEDValues();
-void createLEDsJsonOnServer();
-void writeSensorsData();
+//Function declaration
+void readDHT();
+void readAIs();
+void readServer();
+void writeServer();
 
 //Please put your device ID
 String Device_ID = "FIME20190003";
 
 
 
-//Temp variables
-int count=0;
+//Timing variables
+uint32_t count=0;
+uint32_t DHTReadRate = 20;
+uint32_t AIReadRate = 5;
+uint32_t ReadServerRate = 1;
+uint32_t WriteServerRate = AIReadRate;
+
 
 
 //Pin assignation
@@ -91,10 +98,13 @@ void setup()
 }
 void loop()
 {
-
-  readNSetLEDValues();
-  writeSensorsData();
-  delay(5000);
+  if(count%DHTReadRate == 0) readDHT();
+  if(count%AIReadRate == 0) readAIs();
+  if(count%ReadServerRate == 0) readServer();
+  if(count%WriteServerRate == 0) writeServer();
+  count++;
+  if (count>1000) count -= 1000;
+  delay(100);
 }
 
 void createLEDsJsonOnServer() {
@@ -102,10 +112,13 @@ void createLEDsJsonOnServer() {
   for (int i=0; i<3; i++) {
     sendData.addInt(String(i),0);
   }
-  Firebase.setJSON(firebaseData, path+"/led", sendData);
+  if (Firebase.setJSON(firebaseData, path+"/led", sendData))
+    Serial.println("LED reset on server successful");
+  else
+    Serial.println("Server error: Unable to reset LED on server.");
 }
 
-void readNSetLEDValues() {
+void readServer() {
   for (int i=0; i<3; i++) {
     String PathString = path+"/led/"+String(i);
     if (Firebase.getInt(firebaseData, PathString)) {
@@ -120,8 +133,7 @@ void readNSetLEDValues() {
   setActuators();
 }
 
-void writeSensorsData() {
-  getValues();
+void writeServer() {
   ite++;
   sendData.clear()
   .addInt("i",ite)
@@ -130,7 +142,11 @@ void writeSensorsData() {
   .addInt("touch", touchRead(T0))
   .addDouble("temp", Temp)
   .addDouble("humidity", Humidity);
-  Firebase.setJSON(firebaseData, path+"/sensors", sendData);  
+  if (Firebase.setJSON(firebaseData, path+"/sensors", sendData))
+    Serial.println("Write to sever successful");
+  else
+    Serial.println("Server error: Unable to write sensor data on server.");
+  
 }
 
 void setActuators() {
@@ -139,14 +155,7 @@ void setActuators() {
   }
 }
 
-void getValues(){
-  POT = analogRead(potPin);
-  LDR = analogRead(ldrPin);
-  Serial.println("Pot: "+ String(POT) +"\nLDR: "+String(LDR));
-  getTempAndHum();
-}
-
-void getTempAndHum() {
+void readDHT() {
   TempAndHumidity newValues = dht.getTempAndHumidity();
   if (dht.getStatus() != 0) {
     Serial.println("DHT11 error status: " + String(dht.getStatusString()));
@@ -155,4 +164,10 @@ void getTempAndHum() {
   Temp = newValues.temperature;
   Humidity = newValues.humidity;
   Serial.println("Temp: "+ String(Temp) +"\nHumidity: "+ String(Humidity));
+}
+
+void readAIs() {
+  POT = analogRead(potPin);
+  LDR = analogRead(ldrPin);
+  Serial.println("Pot: "+ String(POT) +"\nLDR: "+String(LDR));  
 }
