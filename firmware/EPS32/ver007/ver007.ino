@@ -22,7 +22,7 @@ void readServer();
 void writeServer();
 
 //Please put your device ID
-String Device_ID = "FIME20190003";
+String Device_ID = "FIME20190002";
 
 
 
@@ -40,8 +40,8 @@ const uint8_t potPin = 35;
 const uint8_t ldrPin = 34;
 const uint8_t ledR = 23;
 const uint8_t ledG = 22;
-const uint8_t ledB = 21; 
-const uint8_t dhtPin = 17;
+const uint8_t ledB = 21;
+const uint8_t dhtPin = 16;
 
 //Variable initialization
 uint8_t LEDs[3] = {0, 0, 0};
