@@ -1,10 +1,6 @@
 #include <WiFi.h>
 #include <FirebaseESP32.h>
 #include "DHTesp.h"
-/*#define WIFI_SSID "Souji"
-#define WIFI_PASSWORD "sur12345"/**/
-/*#define WIFI_SSID "ELSUPER"
-#define WIFI_PASSWORD "8711843550"/**/
 #define WIFI_SSID "IOTFIME2019"
 #define WIFI_PASSWORD "EAFTUxgWt8aYw44M"/**/
 #define FIREBASE_HOST "skgadi-basic-iot.firebaseio.com"
@@ -22,7 +18,7 @@ void readServer();
 void writeServer();
 
 //Please put your device ID
-String Device_ID = "FIME20190002";
+String Device_ID = "FIME20190005";
 
 
 
@@ -41,7 +37,7 @@ const uint8_t ldrPin = 34;
 const uint8_t ledR = 23;
 const uint8_t ledG = 22;
 const uint8_t ledB = 21;
-const uint8_t dhtPin = 16;
+const uint8_t dhtPin = 17;
 
 //Variable initialization
 uint8_t LEDs[3] = {0, 0, 0};
