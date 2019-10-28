@@ -1,0 +1,30 @@
+{
+  "name": "iot-configurator",
+  "version": "1.0.0",
+  "description": "IOT Configurator: Helps to configure the module for certain operation",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skgadi/iot.git"
+  },
+  "keywords": [
+    "iot",
+    "configurator"
+  ],
+  "author": "S. K. Gadi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/skgadi/iot/issues"
+  },
+  "homepage": "https://github.com/skgadi/iot#readme",
+  "dependencies": {
+    "vue": "^2.6.10"
+  },
+  "devDependencies": {
+    "electron": "^7.0.0"
+  }
+}
