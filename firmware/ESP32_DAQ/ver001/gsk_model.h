@@ -94,8 +94,9 @@ void loop() {
   if (InCount) {
     Serial.readBytes(InBytes, InCount);
     double Temp_T_S = atof (InBytes);
-    if (Temp_T_S>=0.001 && Temp_T_S<=10) {
+    if (Temp_T_S>=0.001) {
       System.T_S = Temp_T_S;
+      Serial.println(Temp_T_S);
     }
     
   }

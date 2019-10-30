@@ -33,7 +33,7 @@
   <link rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.3/gh-fork-ribbon.min.css" />
   <!--Redirect to a correct page-->
-  
+
   <style>
     .w3-input {
       outline-width: 0;
@@ -66,8 +66,67 @@
     <span class="w3-xlarge">IOT configurator</span>
   </header>
   <div id="app">
+    <div v-if="!browserSetup">
+      Your browser is not supporting ...
+    </div>
+    <div v-else>
+      <div v-if="!connection">
+        Please install the plug-in to proceed ...<br />
+        You can download it from <a>here.</a>
+      </div>
+      <div v-else>
+        <input v-model.number="temp">
+        <button @click="send">Send</button>
+      </div>
+    </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+
+  <script>
+    var app = new Vue({
+      el: "#app",
+      data: {
+        temp: 0.1,
+        browserSetup: false,
+        connection: null
+      },
+      mounted: function () {
+        if (window["WebSocket"]) {
+          this.browserSetup=true;
+        }
+
+      },
+      methods: {
+        send: function() {
+          conn.send("send com3 "+this.temp);
+        }
+      }
+    });
+
+    var conn;
+    function checkThePlugin() {
+      console.log("called");
+      if (!conn) {
+        console.log("entered");
+        try {
+          conn = new WebSocket("ws://localhost:8989/ws");
+        } catch (e) {
+          return;
+        }
+        conn.onclose = function (evt) {
+          conn = null;
+          app.$set(app.$data, 'connection', null);
+        }
+        conn.onmessage = function (evt) {
+          if (!!evt.data && !!JSON.parse(evt.data).Hostname) app.$set(app.$data, 'connection', conn);
+          console.log(evt.data);
+        }
+      }
+    }
+
+    checkThePlugin();
+    var pluginTestingInterval = setInterval(checkThePlugin, 3000);
+  </script>
 
 </body>
 
