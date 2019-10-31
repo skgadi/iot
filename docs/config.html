@@ -56,25 +56,103 @@
       margin: auto !important;
     }
   </style>
+  <style>
+    /*Spinner from https://loading.io/css/ */
+    .lds-ripple {
+      display: inline-block;
+      position: relative;
+      width: 64px;
+      height: 64px;
+    }
+
+    .lds-ripple div {
+      position: absolute;
+      border: 4px solid rgb(161, 19, 154);
+      opacity: 1;
+      border-radius: 50%;
+      animation: lds-ripple 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+
+    .lds-ripple div:nth-child(2) {
+      animation-delay: -0.5s;
+    }
+
+    @keyframes lds-ripple {
+      0% {
+        top: 28px;
+        left: 28px;
+        width: 0;
+        height: 0;
+        opacity: 1;
+      }
+
+      100% {
+        top: -1px;
+        left: -1px;
+        width: 58px;
+        height: 58px;
+        opacity: 0;
+      }
+    }
+  </style>
 </head>
 
-<body>
+<body style="background: lightgoldenrodyellow;">
   <a class="github-fork-ribbon" href="https://github.com/skgadi/iot" data-ribbon="Code @ GitHub"
     title="Code @ GitHub">Code @ GitHub</a>
   <header class="w3-container w3-theme w3-padding" style="margin-bottom: 20px;">
     <span><img src="android-icon-192x192.png" height="64px;"></span>
     <span class="w3-xlarge">IOT configurator</span>
   </header>
-  <div id="app">
+  <div id="app" style="max-width: 500px; margin: auto;">
     <div v-if="!browserSetup">
       Your browser is not supporting ...
     </div>
     <div v-else>
-      <div v-if="!connection">
-        Please install the plug-in to proceed ...<br />
-        You can download it from <a>here.</a>
+      <div v-if="!connection" style="text-align: center;">
+        <div class="lds-ripple">
+          <div></div>
+          <div></div>
+        </div><br />
+        Waiting for a message from the complimentary program.<br />
+        You don't need administrative permissions to run this program.<br />
+        You can download it from the following link.<br />
+        <a class="w3-btn w3-theme" target="_blank" href="https://github.com/chilipeppr/serial-port-json-server">Code</a>
+        <a class="w3-btn w3-theme" target="_blank"
+          href="https://github.com/chilipeppr/serial-port-json-server/releases">Releases</a>
       </div>
       <div v-else>
+        <div class="w3-row">
+          <div class="w3-col s11">
+            <select class="w3-select w3-input w3-border w3-border-theme" v-model="selectedPort">
+              <option disabled>Click refresh to show the available devices</option>
+              <option v-for="(item, index) in SerialPorts" :value="index">{{item.Friendly}}</option>
+            </select>
+          </div>
+          <div class="w3-col s1">
+            <button class="w3-button w3-theme w3-border w3-border-theme" @click="refreshPorts"><i
+                class="fas fa-sync-alt"></i></button>
+          </div>
+        </div>
+        <div v-if="selectedPort !== null">
+          <div class="w3-tooltip" style="text-align: right;">
+            Port info <i class="fas fa-info-circle"></i><span
+              style="text-align: left; position:absolute;right:0;top:18px; background: silver;" class="w3-text w3-tag">
+              Port: <b>{{SerialPorts[selectedPort].Name}}</b><br />
+              Friendly: <b>{{SerialPorts[selectedPort].Friendly}}</b><br />
+              Serial number: <b>{{SerialPorts[selectedPort].SerialNumber}}</b><br />
+              Device class: <b>{{SerialPorts[selectedPort].DeviceClass}}</b><br />
+              Is open: <b>{{SerialPorts[selectedPort].IsOpen}}</b><br />
+              Is primary: <b>{{SerialPorts[selectedPort].IsPrimary}}</b><br />
+              Related names: <b>{{SerialPorts[selectedPort].RelatedNames}}</b><br />
+              Baud: <b>{{SerialPorts[selectedPort].Baud}}</b><br />
+              Buffer algorithm: <b>{{SerialPorts[selectedPort].BufferAlgorithm}}</b><br />
+              USB Vendor ID: <b>{{SerialPorts[selectedPort].UsbVid}}</b><br />
+              USB Product ID: <b>{{SerialPorts[selectedPort].UsbPid}}</b><br />
+              Feedrate override: <b>{{SerialPorts[selectedPort].FeedRateOverride}}</b><br />
+            </span>
+          </div>
+        </div>
         <input v-model.number="temp">
         <button @click="send">Send</button>
       </div>
@@ -88,22 +166,28 @@
       data: {
         temp: 0.1,
         browserSetup: false,
-        connection: null
+        connection: null,
+        SerialPorts: [],
+        selectedPort: null
       },
       mounted: function () {
         if (window["WebSocket"]) {
-          this.browserSetup=true;
+          this.browserSetup = true;
         }
 
       },
       methods: {
-        send: function() {
-          conn.send("send com3 "+this.temp);
+        refreshPorts: function () {
+          conn.send("list");
+        },
+        send: function () {
+          conn.send("send com3 " + this.temp);
         }
       }
     });
 
     var conn;
+
     function checkThePlugin() {
       console.log("called");
       if (!conn) {
@@ -118,8 +202,14 @@
           app.$set(app.$data, 'connection', null);
         }
         conn.onmessage = function (evt) {
-          if (!!evt.data && !!JSON.parse(evt.data).Hostname) app.$set(app.$data, 'connection', conn);
           console.log(evt.data);
+          if (!!evt.data && !!JSON.parse(evt.data).Hostname) {
+            app.$set(app.$data, 'connection', conn)
+            conn.send("list");
+          };
+          if (!!evt.data && !!JSON.parse(evt.data).SerialPorts) app.$set(app.$data, 'SerialPorts', JSON.parse(evt
+            .data).SerialPorts);
+
         }
       }
     }
