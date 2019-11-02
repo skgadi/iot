@@ -82,7 +82,7 @@ void realtimeActivity(void *GSystem) {
 }
 
 void gskInit() {
-  Serial.begin(115200);
+  Serial.begin(1500000);
   readParamsFromEEPROM();
   xTaskCreatePinnedToCore(realtimeActivity, "realtimeActivity", 32768, (void*)&System, 2,  NULL,  ARDUINO_RUNNING_CORE);
 }

@@ -35,6 +35,11 @@
   <!--Redirect to a correct page-->
 
   <style>
+    .smallIconButton {
+      padding: 0px;
+      height: 40px;
+    }
+
     .w3-input {
       outline-width: 0;
     }
@@ -123,33 +128,39 @@
       </div>
       <div v-else>
         <div class="w3-row">
-          <div class="w3-col s11">
+          <div class="w3-col s1">
+            <button class="w3-button w3-theme w3-border w3-border-theme smallIconButton w3-block"
+              @click="refreshPorts"><i class="fas fa-sync-alt"></i></button>
+          </div>
+          <div class="w3-col" :class="validSelectedPort()? 's10' : 's11'">
             <select class="w3-select w3-input w3-border w3-border-theme" v-model="selectedPort">
               <option disabled>Click refresh to show the available devices</option>
-              <option v-for="(item, index) in SerialPorts" :value="index">{{item.Friendly}}</option>
+              <option v-for="(item, index) in SerialPorts" :value="item.Name">{{item.Friendly}}</option>
             </select>
           </div>
-          <div class="w3-col s1">
-            <button class="w3-button w3-theme w3-border w3-border-theme" @click="refreshPorts"><i
-                class="fas fa-sync-alt"></i></button>
+          <div class="w3-col s1" v-if="validSelectedPort()">
+            <button v-if="isOpen()" class="w3-button w3-border w3-border-theme w3-block smallIconButton w3-red"
+              @click="disconnect"><i class="fas fa-times"></i></button>
+            <button v-else class="w3-button w3-border w3-border-theme w3-block smallIconButton w3-green"
+              @click="connect"><i class="fas fa-plug"></i></button>
           </div>
         </div>
-        <div v-if="selectedPort !== null">
-          <div class="w3-tooltip" style="text-align: right;">
-            Port info <i class="fas fa-info-circle"></i><span
-              style="text-align: left; position:absolute;right:0;top:18px; background: silver;" class="w3-text w3-tag">
-              Port: <b>{{SerialPorts[selectedPort].Name}}</b><br />
-              Friendly: <b>{{SerialPorts[selectedPort].Friendly}}</b><br />
-              Serial number: <b>{{SerialPorts[selectedPort].SerialNumber}}</b><br />
-              Device class: <b>{{SerialPorts[selectedPort].DeviceClass}}</b><br />
-              Is open: <b>{{SerialPorts[selectedPort].IsOpen}}</b><br />
-              Is primary: <b>{{SerialPorts[selectedPort].IsPrimary}}</b><br />
-              Related names: <b>{{SerialPorts[selectedPort].RelatedNames}}</b><br />
-              Baud: <b>{{SerialPorts[selectedPort].Baud}}</b><br />
-              Buffer algorithm: <b>{{SerialPorts[selectedPort].BufferAlgorithm}}</b><br />
-              USB Vendor ID: <b>{{SerialPorts[selectedPort].UsbVid}}</b><br />
-              USB Product ID: <b>{{SerialPorts[selectedPort].UsbPid}}</b><br />
-              Feedrate override: <b>{{SerialPorts[selectedPort].FeedRateOverride}}</b><br />
+        <div v-if="validSelectedPort()">
+          <div class="w3-tooltip w3-small" style="background: rgb(218, 204, 231);">
+            <i class="fas fa-info-circle"></i> Port info<span
+              style="text-align: left; position:absolute;left:0;top:18px; background: rgb(218, 204, 231); color: black;; " class="w3-text w3-tag w3-block">
+              Port: <b>{{sPortItem.Name}}</b><br />
+              Friendly: <b>{{sPortItem.Friendly}}</b><br />
+              Serial number: <b>{{sPortItem.SerialNumber}}</b><br />
+              Device class: <b>{{sPortItem.DeviceClass}}</b><br />
+              Is open: <b>{{sPortItem.IsOpen}}</b><br />
+              Is primary: <b>{{sPortItem.IsPrimary}}</b><br />
+              Related names: <b>{{sPortItem.RelatedNames}}</b><br />
+              Baud: <b>{{sPortItem.Baud}}</b><br />
+              Buffer algorithm: <b>{{sPortItem.BufferAlgorithm}}</b><br />
+              USB Vendor ID: <b>{{sPortItem.UsbVid}}</b><br />
+              USB Product ID: <b>{{sPortItem.UsbPid}}</b><br />
+              Feedrate override: <b>{{sPortItem.FeedRateOverride}}</b><br />
             </span>
           </div>
         </div>
@@ -168,7 +179,9 @@
         browserSetup: false,
         connection: null,
         SerialPorts: [],
-        selectedPort: null
+        selectedPort: null,
+        sPortItem: null,
+        baudrate: 1500000
       },
       mounted: function () {
         if (window["WebSocket"]) {
@@ -177,8 +190,26 @@
 
       },
       methods: {
+        validSelectedPort: function () {
+          for (var i = 0; i < this.SerialPorts.length; i++) {
+            if (this.SerialPorts[i].Name === this.selectedPort) {
+              this.sPortItem = this.SerialPorts[i];
+              return true;
+            }
+          }
+          return false;
+        },
+        isOpen: function () {
+          return this.sPortItem.IsOpen;
+        },
         refreshPorts: function () {
           conn.send("list");
+        },
+        connect: function () {
+          conn.send("open " + this.sPortItem.Name + " "+ this.baudrate +" timed");
+        },
+        disconnect: function () {
+          conn.send("close " + this.sPortItem.Name);
         },
         send: function () {
           conn.send("send com3 " + this.temp);
@@ -203,13 +234,29 @@
         }
         conn.onmessage = function (evt) {
           console.log(evt.data);
-          if (!!evt.data && !!JSON.parse(evt.data).Hostname) {
+          if (!!evt.data) {
+            var recInfo;
+            try {
+              recInfo = JSON.parse(evt.data);
+            } catch (e) {
+              return;
+            }
+          }
+          if (!!recInfo.Hostname) {
             app.$set(app.$data, 'connection', conn)
             conn.send("list");
           };
-          if (!!evt.data && !!JSON.parse(evt.data).SerialPorts) app.$set(app.$data, 'SerialPorts', JSON.parse(evt
-            .data).SerialPorts);
-
+          if (!!recInfo.SerialPorts) {
+            app.$set(app.$data, 'SerialPorts', JSON.parse(evt.data).SerialPorts);
+          }
+          if (!!recInfo.Cmd) {
+            if (recInfo.Cmd === "Open" || recInfo.Cmd === "Close") {
+              conn.send("list");
+            }
+            if (recInfo.Cmd === "OpenFail" || recInfo.Cmd === "CloseFail") {
+            console.log("error: " + recInfo.Desc);
+            }
+          }
         }
       }
     }
