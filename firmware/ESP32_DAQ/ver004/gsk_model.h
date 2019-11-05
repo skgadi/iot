@@ -41,7 +41,8 @@ VAR newVAR(String Name, double Value) {
   return Out;
 }
 
-StaticJsonDocument<300> JsonCode;
+StaticJsonDocument<300> JsonCodeIn;
+StaticJsonDocument<300> JsonCodeOut;
 
 void readParamsFromEEPROM() {
   int count = System.Params.size();
@@ -97,29 +98,58 @@ void loop() {
   if (Serial.available()) {
     const String InItem = Serial.readString();
     // Deserialize the JSON document
-    DeserializationError error = deserializeJson(JsonCode, InItem);
+    DeserializationError error = deserializeJson(JsonCodeIn, InItem);
     if (!error) {
-      int cmd = JsonCode["A"];
+      int cmd = JsonCodeIn["A"];
+      JsonCodeOut.clear();
+      JsonCodeOut["B"] = cmd;
       switch (cmd) {
         case 0:  { //Count number of states
-          JsonCode.clear();
-          JsonCode["n"] = 0;
-          JsonCode["v"] = System.States.size();
-          serializeMsgPack(JsonCode, Serial);
+          JsonCodeOut["v"] = System.States.size();
         }
         break;
         case 1: { //Read state
-          int i = JsonCode["i"];
-          if (i>=0 && i<System.States.size())
-            JsonCode.clear();
-            JsonCode["n"] = 1;
-            JsonCode["i"] = i;
-            JsonCode["v"] = System.States[i].Name;
-            serializeMsgPack(JsonCode, Serial);
+          int i = JsonCodeIn["i"];
+          if (i>=0 && i<System.States.size()) {
+            JsonCodeOut["i"] = i;
+            JsonCodeOut["v"] = System.States[i].Name;
+          }
+        }
+        break;
+        case 2: { //Read sValue
+          int i = JsonCodeIn["i"];
+          if (i>=0 && i<System.States.size()) {
+            JsonCodeOut["i"] = i;
+            JsonCodeOut["v"] = System.States[i].Value;
+          }
+        }
+        break;
+        case 3: { //Read pCount
+          int i = JsonCodeIn["i"];
+          if (i>=0 && i<System.States.size()) {
+            JsonCodeOut["v"] = System.Params.size();
+          }
+        }
+        break;
+        case 4: { //Read param
+          int i = JsonCodeIn["i"];
+          if (i>=0 && i<System.Params.size()) {
+            JsonCodeOut["i"] = i;
+            JsonCodeOut["v"] = System.Params[i].Name;
+          }
+        }
+        break;
+        case 5: { //Read pValue
+          int i = JsonCodeIn["i"];
+          if (i>=0 && i<System.Params.size()) {
+            JsonCodeOut["i"] = i;
+            JsonCodeOut["v"] = System.Params[i].Value;
+          }
         }
         break;
       }
-      JsonCode.clear();
+      serializeJson(JsonCodeOut, Serial);
+      JsonCodeIn.clear();
     } else {
       Serial.println("opss");
     }

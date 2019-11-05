@@ -216,14 +216,15 @@
                 </tr>
               </thead>
               <tbody>
-                <template v-for="(item, idx) in params" :key = "updatingCunter">
+                <template v-for="(item, idx) in params" :key="updatingCunter">
                   <tr>
                     <td v-if="!!item && !!item.Name" v-html="item.Name"></td>
                     <td v-if="!!item && item.Value !== undefined && !item.editMode" class="w3-right-align">
                       {{item.Value}} <i class="fa-fw fas fa-pen w3-text-purple" @click="editThis(idx)"></i></td>
                     <td v-if="!!item && item.Value !== undefined && !!item.editMode" class="w3-right-align"><input
-                        :value="item.Value" class="w3-input"> <i class="fa-fw fas fa-check w3-text-green" @click="updateParam($event, idx)"></i> <i
-                        class="fa-fw fas fa-times w3-text-red" @click="item.editMode = false"></i></td>
+                        :value="item.Value" class="w3-input"> <i class="fa-fw fas fa-check w3-text-green"
+                        @click="updateParam($event, idx)"></i> <i class="fa-fw fas fa-times w3-text-red"
+                        @click="item.editMode = false"></i></td>
                   </tr>
                 </template>
               </tbody>
@@ -238,6 +239,7 @@
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script crossorigin src="https://unpkg.com/@msgpack/msgpack"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
   <script>
     //MathJax setup
@@ -274,7 +276,7 @@
         SerialPorts: [],
         selectedPort: null,
         sPortItem: {},
-        baudrate: 115200,
+        baudrate: 1500000,
         states: [],
         params: [],
         display: {
@@ -310,30 +312,42 @@
           return this.sPortItem.IsOpen;
         },
         refreshPorts: function () {
-          commandQueue.push("list");
+          conn.send("list");
         },
         connect: function () {
-          commandQueue.push("open " + this.sPortItem.Name + " " + this.baudrate + " timed");
+          conn.send("open " + this.sPortItem.Name + " " + this.baudrate + " timed");
         },
         disconnect: function () {
-          commandQueue.push("close " + this.sPortItem.Name);
+          conn.send("close " + this.sPortItem.Name);
         },
         refreshStates: function () {
-          commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(1));
+          SenderCtl.appendCmd({
+            "A": 0
+          });
         },
         refreshParams: function () {
-          commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(4));
+          SenderCtl.appendCmd({
+            "A": 3
+          });
         },
         editThis: function (idx) {
-          app.$set(app.$data.params, idx, Object.assign (app.$data.params[idx], {'editMode': true}));
+          app.$set(app.$data.params, idx, Object.assign(app.$data.params[idx], {
+            'editMode': true
+          }));
         },
         updateParam: function (evt, idx) {
           try {
-            commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(7) + String(evt.target.previousElementSibling.value));
+            SenderCtl.appendCmd({
+              "A": 6,
+              "i": idx,
+              "v": parseFloat(evt.target.previousElementSibling.value)
+            });
           } catch (e) {
             console.log("error converting to double")
           }
-            app.$set(app.$data.params, idx, Object.assign (app.$data.params[idx], {'editMode': false}));
+          app.$set(app.$data.params, idx, Object.assign(app.$data.params[idx], {
+            'editMode': false
+          }));
         },
 
       }
@@ -355,7 +369,7 @@
           app.$set(app.$data, 'connection', null);
         }
         conn.onmessage = function (evt) {
-          console.log(evt.data);
+          //console.log(evt.data);
           if (!!evt.data) {
             var recInfo;
             try {
@@ -366,7 +380,7 @@
           }
           if (!!recInfo.Hostname) {
             app.$set(app.$data, 'connection', conn)
-            commandQueue.push("list");
+            conn.send("list");
             return;
           };
           if (!!recInfo.SerialPorts) {
@@ -375,13 +389,17 @@
           }
           if (!!recInfo.Cmd) {
             if (recInfo.Cmd === "Open") {
-              commandQueue.push("list");
-              commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(1));
-              commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(4));
+              conn.send("list");
+              SenderCtl.appendCmd({
+                "A": 0
+              });
+              SenderCtl.appendCmd({
+                "A": 3
+              });
               return;
             }
             if (recInfo.Cmd === "Close") {
-              commandQueue.push("list");
+              conn.send("list");
               app.$set(app.$data, 'sPortItem', null);
               app.$set(app.$data, 'states', []);
               app.$set(app.$data, 'params', []);
@@ -398,52 +416,59 @@
             } catch (e) {
               return;
             }
-            //States
-            if (!!readCommand.sCount) {
-              for (var i = 0; i < readCommand.sCount; i++) {
-                commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(2) + String.fromCharCode(i));
-                commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(3) + String.fromCharCode(i));
-              }
-              return;
+            isReadyToSend = true;
+            if (readCommand.B === undefined) return;
+            SenderCtl.commandExecuted();
+            switch (readCommand.B) {
+              case 0:
+                for (var i = 0; i < readCommand.v; i++) {
+                  SenderCtl.appendCmd({
+                    "A": 1,
+                    "i": i
+                  });
+                  SenderCtl.appendCmd({
+                    "A": 2,
+                    "i": i
+                  });
+                }
+                break;
+              case 1:
+                app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
+                  .states[readCommand.i] : {}), {
+                  "Name": readCommand.v
+                }));
+                break;
+              case 2:
+                app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
+                  .states[readCommand.i] : {}), {
+                  "Value": readCommand.v
+                }));
+                break;
+              case 3:
+                for (var i = 0; i < readCommand.v; i++) {
+                  SenderCtl.appendCmd({
+                    "A": 4,
+                    "i": i
+                  });
+                  SenderCtl.appendCmd({
+                    "A": 5,
+                    "i": i
+                  });
+                }
+                break;
+              case 4:
+                app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
+                  .params[readCommand.i] : {}), {
+                  "Name": readCommand.v
+                }));
+                break;
+              case 5:
+                app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
+                  .params[readCommand.i] : {}), {
+                  "Value": parseFloat(readCommand.v)
+                }));
+                break;
             }
-            if (!!readCommand.state && readCommand.idx !== undefined) {
-              app.$set(app.$data.states, readCommand.idx, Object.assign((app.$data.states[readCommand.idx] ? app.$data
-                .states[readCommand.idx] : {}), {
-                "Name": readCommand.state
-              }));
-              return;
-            }
-            if (!!readCommand.sValue && readCommand.idx !== undefined) {
-              app.$set(app.$data.states, readCommand.idx, Object.assign((app.$data.states[readCommand.idx] ? app.$data
-                .states[readCommand.idx] : {}), {
-                "Value": parseFloat(readCommand.sValue)
-              }));
-              return;
-            }
-            //Params
-            if (!!readCommand.pCount) {
-
-              for (var i = 0; i < readCommand.pCount; i++) {
-                commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(5) + String.fromCharCode(i));
-                //commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(6) + String.fromCharCode(i));
-              }
-              return;
-            }
-            if (!!readCommand.param && readCommand.idx !== undefined) {
-              app.$set(app.$data.params, readCommand.idx, Object.assign((app.$data.params[readCommand.idx] ? app.$data
-                .params[readCommand.idx] : {}), {
-                "Name": readCommand.param
-              }));
-              return;
-            }
-            if (!!readCommand.pValue && readCommand.idx !== undefined) {
-              app.$set(app.$data.params, readCommand.idx, Object.assign((app.$data.params[readCommand.idx] ? app.$data
-                .params[readCommand.idx] : {}), {
-                "Value": parseFloat(readCommand.pValue)
-              }));
-              return;
-            }
-
           }
         }
       }
@@ -456,20 +481,58 @@
   <script>
     function refreshStateValues() {
       for (var i = 0; i < app.$data.states.length; i++) {
-        commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(3) + String.fromCharCode(i));
+        SenderCtl.appendCmd({
+          "A": 2,
+          "i": i
+        });
       }
     }
     //setInterval(refreshStateValues, 1500);
   </script>
 
   <script>
-  var commandQueue = [];
-  function sendControl () {
-    if (commandQueue.length>0) {
-      conn.send(commandQueue.shift());
+    var SenderCtl = new sendController ( "COM6", conn);
+    function sendController (cPort, sConn) {
+      var cmdQueue = [];
+      var timeOut = 100;
+      var readyToSend = false;
+      var conn = sConn;
+      var port = cPort;
+      this.sendControl = function () {
+        if (readyToSend && cmdQueue.length > 0) {
+          readyToSend = false;
+          var cmd = cmdQueue[0];
+          console.log(cmd);
+          conn.send(`send ${port} ${JSON.stringify(cmd)}`);
+        }
+      }
+      this.appendCmd = function (cmd) {
+        cmdQueue.push(cmd);
+        console.log(cmdQueue);
+      }
+      this.commandExecuted = function () {
+        cmdQueue.shift();
+      }
+      this.setPort = function (newPort) {
+        port = newPort;
+      }
+      this.showCommandsQueue = function () {
+        console.log(cmdQueue);
+      }
+      setInterval(function (){readyToSend = true;}, 2000);
+      setInterval(this.sendControl, 100);
     }
-  }
-  setInterval(sendControl, 1000);
+    var commandQueue = [];
+    var isReadyToSend = true;
+    function sendControl() {
+      if (isReadyToSend && commandQueue.length > 0) {
+        isReadyToSend = false;
+        var cmd = commandQueue.shift();
+        //console.log(cmd);
+        conn.send(`send ${app.$data.sPortItem.Name} ${JSON.stringify(cmd)}\n\r`);
+      }
+    }
+    //setInterval(sendControl, 10);
   </script>
 
 </body>
