@@ -1,4 +1,4 @@
-
+#include <ArduinoJson.h>
 #include <vector>
 #include <math.h>
 using namespace std;
@@ -41,6 +41,8 @@ VAR newVAR(String Name, double Value) {
   return Out;
 }
 
+StaticJsonDocument<300> JsonCode;
+
 void readParamsFromEEPROM() {
   int count = System.Params.size();
   int Address = 0;
@@ -81,20 +83,56 @@ void realtimeActivity(void *GSystem) {
   }
 }
 
+
 void gskInit() {
   Serial.begin(1500000);
   readParamsFromEEPROM();
   xTaskCreatePinnedToCore(realtimeActivity, "realtimeActivity", 32768, (void*)&System, 2,  NULL,  ARDUINO_RUNNING_CORE);
 }
 
-char cmdByte, InBytes[100];
+char cmdByte;
+char tempDbl[10];
+//String InItem;
 void loop() {
-  int InCount = Serial.available();
+  if (Serial.available()) {
+    const String InItem = Serial.readString();
+    // Deserialize the JSON document
+    DeserializationError error = deserializeJson(JsonCode, InItem);
+    if (!error) {
+      int cmd = JsonCode["A"];
+      switch (cmd) {
+        case 0:  { //Count number of states
+          JsonCode.clear();
+          JsonCode["n"] = 0;
+          JsonCode["v"] = System.States.size();
+          serializeMsgPack(JsonCode, Serial);
+        }
+        break;
+        case 1: { //Read state
+          int i = JsonCode["i"];
+          if (i>=0 && i<System.States.size())
+            JsonCode.clear();
+            JsonCode["n"] = 1;
+            JsonCode["i"] = i;
+            JsonCode["v"] = System.States[i].Name;
+            serializeMsgPack(JsonCode, Serial);
+        }
+        break;
+      }
+      JsonCode.clear();
+    } else {
+      Serial.println("opss");
+    }
+  }
+  /*
+  
+  int InCount = ;
   double recValue=0;
   if (InCount) {
     cmdByte = Serial.read();
     switch (cmdByte) {
-      case 'A': { //set sampling time
+      case 0x00: { //set sampling time
+          char InBytes[100];
           Serial.readBytes(InBytes, InCount);
           double Temp_T_S = atof (InBytes);
           if (Temp_T_S>=0.001) {
@@ -103,28 +141,58 @@ void loop() {
           }
         }
       break;
-      case 'B': { //Count number of states
+      case 0x01: { //Count number of states
           Serial.print("{\"sCount\":" + String(System.States.size()) + "}");
       }
       break;
-      case 'C': { //Read state
+      case 0x02: { //Read state
         uint8_t idx = Serial.read();
         if (idx<System.States.size())
           Serial.print("{\"state\":\""+ System.States[idx].Name +"\",\"idx\":"+idx+"}");
       }
       break;
-      case 'D': { //Write state
+      case 0x03: { //Read State value
         uint8_t idx = Serial.read();
-        String tempItem = Serial.readString();
-        if (idx<System.States.size())
-          System.States[idx].Name = tempItem;
-          Serial.print("{\"state\":\""+ System.States[idx].Name +"\",\"idx\":"+idx+"}");
+        if (idx<System.States.size()) {
+          sprintf(tempDbl, "%e", System.States[idx].Value);
+          Serial.print("{\"sValue\":\""+ String(tempDbl) +"\",\"idx\":"+idx+"}");
+        }
+      }
+      break;
+      case 0x04: { //Count number of Params
+          Serial.print("{\"pCount\":" + String(System.Params.size()) + "}");
+      }
+      break;
+      case 0x05: { //Read state
+        uint8_t idx = Serial.read();
+        if (idx<System.Params.size())
+          Serial.print("{\"param\":\""+ System.Params[idx].Name +"\",\"idx\":"+idx+"}");
+      }
+      break;
+      case 0x06: { //Write state
+        uint8_t idx = Serial.read();
+        if (idx<System.Params.size()) {
+          sprintf(tempDbl, "%e", System.Params[idx].Value);
+          Serial.print("{\"pValue\":\""+ String(tempDbl) +"\",\"idx\":"+idx+"}");
+        }
+      }
+      break;
+      case 0x07: { //Write state
+        char InBytes[100];
+        uint8_t idx = Serial.read();
+        if (idx<System.Params.size()) {
+          Serial.readBytes(InBytes, InCount-2);
+          double TempPVal = atof (InBytes);
+          System.Params[idx].Value = TempPVal;
+          sprintf(tempDbl, "%e", System.Params[idx].Value);
+          Serial.print("{\"pValue\":\""+ String(tempDbl) +"\",\"idx\":"+idx+"}");        
+        }
       }
       break;
       default:
       break;
     }
     
-  }
+  }*/
   delay(100);
 }

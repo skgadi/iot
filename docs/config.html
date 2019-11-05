@@ -122,14 +122,15 @@
         Waiting for a message from the complimentary program.<br />
         You don't need administrative permissions to run this program.<br />
         You can download it from the following link.<br />
-        <a class="w3-btn w3-theme" target="_blank" href="https://github.com/chilipeppr/serial-port-json-server">Code</a>
-        <a class="w3-btn w3-theme" target="_blank"
+        <a class="w3-btn w3-theme w3-ripple" target="_blank"
+          href="https://github.com/chilipeppr/serial-port-json-server">Code</a>
+        <a class="w3-btn w3-theme w3-ripple" target="_blank"
           href="https://github.com/chilipeppr/serial-port-json-server/releases">Releases</a>
       </div>
       <div v-else>
         <div class="w3-row">
           <div class="w3-col s1">
-            <button class="w3-button w3-theme w3-border w3-border-theme smallIconButton w3-block"
+            <button class="w3-button w3-theme w3-border w3-border-theme smallIconButton w3-block w3-ripple"
               @click="refreshPorts"><i class="fas fa-sync-alt"></i></button>
           </div>
           <div class="w3-col" :class="validSelectedPort()? 's10' : 's11'">
@@ -139,49 +140,155 @@
             </select>
           </div>
           <div class="w3-col s1" v-if="validSelectedPort()">
-            <button v-if="isOpen()" class="w3-button w3-border w3-border-theme w3-block smallIconButton w3-red"
+            <button v-if="isOpen()"
+              class="w3-button w3-border w3-border-theme w3-block smallIconButton w3-red w3-ripple"
               @click="disconnect"><i class="fas fa-times"></i></button>
-            <button v-else class="w3-button w3-border w3-border-theme w3-block smallIconButton w3-green"
+            <button v-else class="w3-button w3-border w3-border-theme w3-block smallIconButton w3-green w3-ripple"
               @click="connect"><i class="fas fa-plug"></i></button>
           </div>
         </div>
         <div v-if="validSelectedPort()">
-          <div class="w3-tooltip w3-small" style="background: rgb(218, 204, 231);">
-            <i class="fas fa-info-circle"></i> Port info<span
-              style="text-align: left; position:absolute;left:0;top:18px; background: rgb(218, 204, 231); color: black;; " class="w3-text w3-tag w3-block">
-              Port: <b>{{sPortItem.Name}}</b><br />
-              Friendly: <b>{{sPortItem.Friendly}}</b><br />
-              Serial number: <b>{{sPortItem.SerialNumber}}</b><br />
-              Device class: <b>{{sPortItem.DeviceClass}}</b><br />
-              Is open: <b>{{sPortItem.IsOpen}}</b><br />
-              Is primary: <b>{{sPortItem.IsPrimary}}</b><br />
-              Related names: <b>{{sPortItem.RelatedNames}}</b><br />
-              Baud: <b>{{sPortItem.Baud}}</b><br />
-              Buffer algorithm: <b>{{sPortItem.BufferAlgorithm}}</b><br />
-              USB Vendor ID: <b>{{sPortItem.UsbVid}}</b><br />
-              USB Product ID: <b>{{sPortItem.UsbPid}}</b><br />
-              Feedrate override: <b>{{sPortItem.FeedRateOverride}}</b><br />
-            </span>
+          <div class="w3-theme-l1 w3-border w3-border-theme">
+            <span @click="display.portInfo = !display.portInfo" style="cursor: pointer;">
+              <i class="fa-fw fas fa-caret-down" v-if="display.portInfo"></i>
+              <i class="fa-fw fas fa-caret-right" v-else></i>
+              Port information</span></div>
+          <div v-if="display.portInfo" class="w3-border w3-border-theme" style="background: rgb(197, 253, 253);">
+            Port: <b>{{sPortItem.Name}}</b><br />
+            Friendly: <b>{{sPortItem.Friendly}}</b><br />
+            Serial number: <b>{{sPortItem.SerialNumber}}</b><br />
+            Device class: <b>{{sPortItem.DeviceClass}}</b><br />
+            Is open: <b>{{sPortItem.IsOpen}}</b><br />
+            Is primary: <b>{{sPortItem.IsPrimary}}</b><br />
+            Related names: <b>{{sPortItem.RelatedNames}}</b><br />
+            Baud: <b>{{sPortItem.Baud}}</b><br />
+            Buffer algorithm: <b>{{sPortItem.BufferAlgorithm}}</b><br />
+            USB Vendor ID: <b>{{sPortItem.UsbVid}}</b><br />
+            USB Product ID: <b>{{sPortItem.UsbPid}}</b><br />
+            Feedrate override: <b>{{sPortItem.FeedRateOverride}}</b><br />
           </div>
+          <div class="w3-theme-l1 w3-border w3-border-theme">
+            <span @click="display.states = !display.states" style="cursor: pointer;">
+              <i class="fa-fw fas fa-caret-down" v-if="display.states"></i>
+              <i class="fa-fw fas fa-caret-right" v-else></i>
+              States
+            </span>
+            <span class="w3-right" style="height: 100%;" @click="refreshStates" style="cursor: pointer;"><i
+                class="fa-fw fas fa-sync-alt"></i></span>
+          </div>
+          <div v-if="display.states" class="w3-border w3-border-theme">
+            <table class="w3-table-all w3-hoverable" v-if="states.length !== 0">
+              <thead>
+                <tr class="w3-light-grey">
+                  <th>State</th>
+                  <th class="w3-right-align">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="(item, idx) in states">
+                  <tr>
+                    <td v-if="!!item && !!item.Name" v-html="item.Name"></td>
+                    <td v-if="!!item && item.Value !== undefined" v-html="item.Value" class="w3-right-align"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div v-else>
+              Connect to the device to see the states. Please refresh if not working as expected.
+            </div>
+          </div>
+
+          <div class="w3-theme-l1 w3-border w3-border-theme">
+            <span @click="display.params = !display.params" style="cursor: pointer;">
+              <i class="fa-fw fas fa-caret-down" v-if="display.params"></i>
+              <i class="fa-fw fas fa-caret-right" v-else></i>
+              Parameters
+            </span>
+            <span class="w3-right" style="height: 100%;" @click="refreshParams" style="cursor: pointer;"><i
+                class="fa-fw fas fa-sync-alt"></i></span>
+          </div>
+          <div v-if="display.params" class="w3-border w3-border-theme">
+            <table class="w3-table-all w3-hoverable" v-if="params.length !== 0">
+              <thead>
+                <tr class="w3-light-grey">
+                  <th>State</th>
+                  <th class="w3-right-align">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="(item, idx) in params" :key = "updatingCunter">
+                  <tr>
+                    <td v-if="!!item && !!item.Name" v-html="item.Name"></td>
+                    <td v-if="!!item && item.Value !== undefined && !item.editMode" class="w3-right-align">
+                      {{item.Value}} <i class="fa-fw fas fa-pen w3-text-purple" @click="editThis(idx)"></i></td>
+                    <td v-if="!!item && item.Value !== undefined && !!item.editMode" class="w3-right-align"><input
+                        :value="item.Value" class="w3-input"> <i class="fa-fw fas fa-check w3-text-green" @click="updateParam($event, idx)"></i> <i
+                        class="fa-fw fas fa-times w3-text-red" @click="item.editMode = false"></i></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+            <div v-else>
+              Connect to the device to see the parameters. Please refresh if not working as expected.
+            </div>
+          </div>
+
         </div>
-        <input v-model.number="temp">
-        <button @click="send">Send</button>
       </div>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+  <script>
+    //MathJax setup
+    MathJax.Hub.Config({
+      showMathMenu: false,
+      messageStyle: "none",
+      menuSettings: {
+        inTabOrder: false
+      },
+      extensions: ["tex2jax.js"],
+      jax: ["input/TeX", "output/HTML-CSS"],
+      tex2jax: {
+        preview: "none",
+        inlineMath: [
+          ["$", "$"],
+          ["\\(", "\\)"]
+        ],
+        displayMath: [
+          ["$$", "$$"],
+          ["\\[", "\\]"]
+        ]
+      }
+    });
+  </script>
 
   <script>
     var app = new Vue({
       el: "#app",
       data: {
+        updatingCunter: 0,
         temp: 0.1,
         browserSetup: false,
         connection: null,
         SerialPorts: [],
         selectedPort: null,
-        sPortItem: null,
-        baudrate: 1500000
+        sPortItem: {},
+        baudrate: 115200,
+        states: [],
+        params: [],
+        display: {
+          "portInfo": false,
+          "params": false,
+          "states": false,
+          "inputs": false,
+          "outputs": false,
+          "internet": false,
+          "algorithm": false
+        }
+      },
+      updated: function () {
+        MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
       },
       mounted: function () {
         if (window["WebSocket"]) {
@@ -203,26 +310,41 @@
           return this.sPortItem.IsOpen;
         },
         refreshPorts: function () {
-          conn.send("list");
+          commandQueue.push("list");
         },
         connect: function () {
-          conn.send("open " + this.sPortItem.Name + " "+ this.baudrate +" timed");
+          commandQueue.push("open " + this.sPortItem.Name + " " + this.baudrate + " timed");
         },
         disconnect: function () {
-          conn.send("close " + this.sPortItem.Name);
+          commandQueue.push("close " + this.sPortItem.Name);
         },
-        send: function () {
-          conn.send("send com3 " + this.temp);
-        }
+        refreshStates: function () {
+          commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(1));
+        },
+        refreshParams: function () {
+          commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(4));
+        },
+        editThis: function (idx) {
+          app.$set(app.$data.params, idx, Object.assign (app.$data.params[idx], {'editMode': true}));
+        },
+        updateParam: function (evt, idx) {
+          try {
+            commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(7) + String(evt.target.previousElementSibling.value));
+          } catch (e) {
+            console.log("error converting to double")
+          }
+            app.$set(app.$data.params, idx, Object.assign (app.$data.params[idx], {'editMode': false}));
+        },
+
       }
     });
 
     var conn;
 
     function checkThePlugin() {
-      console.log("called");
+      //console.log("called");
       if (!conn) {
-        console.log("entered");
+        //console.log("entered");
         try {
           conn = new WebSocket("ws://localhost:8989/ws");
         } catch (e) {
@@ -244,18 +366,84 @@
           }
           if (!!recInfo.Hostname) {
             app.$set(app.$data, 'connection', conn)
-            conn.send("list");
+            commandQueue.push("list");
+            return;
           };
           if (!!recInfo.SerialPorts) {
             app.$set(app.$data, 'SerialPorts', JSON.parse(evt.data).SerialPorts);
+            return;
           }
           if (!!recInfo.Cmd) {
-            if (recInfo.Cmd === "Open" || recInfo.Cmd === "Close") {
-              conn.send("list");
+            if (recInfo.Cmd === "Open") {
+              commandQueue.push("list");
+              commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(1));
+              commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(4));
+              return;
+            }
+            if (recInfo.Cmd === "Close") {
+              commandQueue.push("list");
+              app.$set(app.$data, 'sPortItem', null);
+              app.$set(app.$data, 'states', []);
+              app.$set(app.$data, 'params', []);
+              return;
             }
             if (recInfo.Cmd === "OpenFail" || recInfo.Cmd === "CloseFail") {
-            console.log("error: " + recInfo.Desc);
+              console.log("error: " + recInfo.Desc);
+              return;
             }
+          } else if (!!recInfo.D && recInfo.P === app.$data.sPortItem.Name) {
+            var readCommand
+            try {
+              readCommand = JSON.parse(recInfo.D);
+            } catch (e) {
+              return;
+            }
+            //States
+            if (!!readCommand.sCount) {
+              for (var i = 0; i < readCommand.sCount; i++) {
+                commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(2) + String.fromCharCode(i));
+                commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(3) + String.fromCharCode(i));
+              }
+              return;
+            }
+            if (!!readCommand.state && readCommand.idx !== undefined) {
+              app.$set(app.$data.states, readCommand.idx, Object.assign((app.$data.states[readCommand.idx] ? app.$data
+                .states[readCommand.idx] : {}), {
+                "Name": readCommand.state
+              }));
+              return;
+            }
+            if (!!readCommand.sValue && readCommand.idx !== undefined) {
+              app.$set(app.$data.states, readCommand.idx, Object.assign((app.$data.states[readCommand.idx] ? app.$data
+                .states[readCommand.idx] : {}), {
+                "Value": parseFloat(readCommand.sValue)
+              }));
+              return;
+            }
+            //Params
+            if (!!readCommand.pCount) {
+
+              for (var i = 0; i < readCommand.pCount; i++) {
+                commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(5) + String.fromCharCode(i));
+                //commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(6) + String.fromCharCode(i));
+              }
+              return;
+            }
+            if (!!readCommand.param && readCommand.idx !== undefined) {
+              app.$set(app.$data.params, readCommand.idx, Object.assign((app.$data.params[readCommand.idx] ? app.$data
+                .params[readCommand.idx] : {}), {
+                "Name": readCommand.param
+              }));
+              return;
+            }
+            if (!!readCommand.pValue && readCommand.idx !== undefined) {
+              app.$set(app.$data.params, readCommand.idx, Object.assign((app.$data.params[readCommand.idx] ? app.$data
+                .params[readCommand.idx] : {}), {
+                "Value": parseFloat(readCommand.pValue)
+              }));
+              return;
+            }
+
           }
         }
       }
@@ -263,6 +451,25 @@
 
     checkThePlugin();
     var pluginTestingInterval = setInterval(checkThePlugin, 3000);
+  </script>
+
+  <script>
+    function refreshStateValues() {
+      for (var i = 0; i < app.$data.states.length; i++) {
+        commandQueue.push("send " + app.$data.sPortItem.Name + " " + String.fromCharCode(3) + String.fromCharCode(i));
+      }
+    }
+    //setInterval(refreshStateValues, 1500);
+  </script>
+
+  <script>
+  var commandQueue = [];
+  function sendControl () {
+    if (commandQueue.length>0) {
+      conn.send(commandQueue.shift());
+    }
+  }
+  setInterval(sendControl, 1000);
   </script>
 
 </body>
