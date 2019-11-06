@@ -40,6 +40,14 @@
       height: 40px;
     }
 
+    .tbg {
+      background: rgba(255, 255, 255, 0.0);
+    }
+
+    td {
+      vertical-align: middle !important;
+    }
+
     .w3-input {
       outline-width: 0;
     }
@@ -212,19 +220,26 @@
               <thead>
                 <tr class="w3-light-grey">
                   <th>State</th>
-                  <th class="w3-right-align">Value</th>
+                  <th class="w3-right-align" colspan="2">Value</th>
                 </tr>
               </thead>
               <tbody>
                 <template v-for="(item, idx) in params" :key="updatingCunter">
                   <tr>
                     <td v-if="!!item && !!item.Name" v-html="item.Name"></td>
-                    <td v-if="!!item && item.Value !== undefined && !item.editMode" class="w3-right-align">
-                      {{item.Value}} <i class="fa-fw fas fa-pen w3-text-purple" @click="editThis(idx)"></i></td>
-                    <td v-if="!!item && item.Value !== undefined && !!item.editMode" class="w3-right-align"><input
-                        :value="item.Value" class="w3-input"> <i class="fa-fw fas fa-check w3-text-green"
-                        @click="updateParam($event, idx)"></i> <i class="fa-fw fas fa-times w3-text-red"
-                        @click="item.editMode = false"></i></td>
+                    <template v-if="!!item && item.Value !== undefined && !item.editMode">
+                        <td  class="w3-right-align">
+                            {{item.Value}}</td>
+                            <td><i class="fa-fw fas fa-pen w3-text-purple" @click="editThis(idx)"></i></td>
+                    </template>
+                    <template v-if="!!item && item.Value !== undefined && !!item.editMode">
+                      <td class="w3-right-align"><input
+                          :value="item.Value" class="w3-input tbg" style="text-align: right;" type="number"></td>
+                          <td><i class="fa-fw fas fa-check w3-text-green"
+                            @click="updateParam($event, idx)"></i> <i class="fa-fw fas fa-times w3-text-red"
+                            @click="closeParamEdit(idx)"></i></td>
+                    </template>
+                        
                   </tr>
                 </template>
               </tbody>
@@ -280,17 +295,28 @@
         states: [],
         params: [],
         display: {
-          "portInfo": false,
-          "params": false,
-          "states": false,
-          "inputs": false,
-          "outputs": false,
-          "internet": false,
-          "algorithm": false
+          "portInfo": true,
+          "params": true,
+          "states": true,
+          "inputs": true,
+          "outputs": true,
+          "internet": true,
+          "algorithm": true
         }
       },
       updated: function () {
         MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+      },
+      watch: {
+        selectedPort: function () {
+          if (!!SenderCtl) SenderCtl.setPort(this.selectedPort)
+          this.$nextTick(function () {
+            if (this.isOpen()) {
+              this.refreshAll();
+            }
+          })
+          
+        }
       },
       mounted: function () {
         if (window["WebSocket"]) {
@@ -320,6 +346,10 @@
         disconnect: function () {
           conn.send("close " + this.sPortItem.Name);
         },
+        refreshAll: function () {
+          this.refreshStates();
+          this.refreshParams();
+        },
         refreshStates: function () {
           SenderCtl.appendCmd({
             "A": 0
@@ -335,6 +365,11 @@
             'editMode': true
           }));
         },
+        closeParamEdit: function(idx) {
+          app.$set(app.$data.params, idx, Object.assign(app.$data.params[idx], {
+            'editMode': false
+          }));
+        },
         updateParam: function (evt, idx) {
           try {
             SenderCtl.appendCmd({
@@ -345,9 +380,7 @@
           } catch (e) {
             console.log("error converting to double")
           }
-          app.$set(app.$data.params, idx, Object.assign(app.$data.params[idx], {
-            'editMode': false
-          }));
+          this.closeParamEdit(idx);
         },
 
       }
@@ -463,6 +496,7 @@
                 }));
                 break;
               case 5:
+              case 6:
                 app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
                   .params[readCommand.i] : {}), {
                   "Value": parseFloat(readCommand.v)
@@ -491,7 +525,7 @@
   </script>
 
   <script>
-    var SenderCtl = new sendController ( "COM6", conn);
+    var SenderCtl = new sendController (null, conn);
     function sendController (cPort, sConn) {
       var cmdQueue = [];
       var timeOut = 100;
@@ -502,16 +536,17 @@
         if (readyToSend && cmdQueue.length > 0) {
           readyToSend = false;
           var cmd = cmdQueue[0];
-          console.log(cmd);
-          conn.send(`send ${port} ${JSON.stringify(cmd)}`);
+          //console.log(cmd);
+          conn.send(`send ${port} ${JSON.stringify(cmd)}\0`);
         }
       }
       this.appendCmd = function (cmd) {
         cmdQueue.push(cmd);
-        console.log(cmdQueue);
+        //console.log(cmdQueue);
       }
       this.commandExecuted = function () {
         cmdQueue.shift();
+        readyToSend = true;
       }
       this.setPort = function (newPort) {
         port = newPort;

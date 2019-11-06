@@ -91,14 +91,16 @@ void gskInit() {
   xTaskCreatePinnedToCore(realtimeActivity, "realtimeActivity", 32768, (void*)&System, 2,  NULL,  ARDUINO_RUNNING_CORE);
 }
 
-char cmdByte;
-char tempDbl[10];
+char InChars[100];
 //String InItem;
 void loop() {
-  if (Serial.available()) {
-    const String InItem = Serial.readString();
+  int availChars = Serial.available();
+  if (availChars) {
+    availChars = (availChars<100)?availChars:100;
+    //Serial.readBytes(InChars, availChars);
+    //const String InItem = Serial.readString();
     // Deserialize the JSON document
-    DeserializationError error = deserializeJson(JsonCodeIn, InItem);
+    DeserializationError error = deserializeJson(JsonCodeIn, Serial);
     if (!error) {
       int cmd = JsonCodeIn["A"];
       JsonCodeOut.clear();
@@ -145,6 +147,26 @@ void loop() {
             JsonCodeOut["i"] = i;
             JsonCodeOut["v"] = System.Params[i].Value;
           }
+        }
+        break;
+        case 6: { //write pValue
+          int i = JsonCodeIn["i"];
+          double val = JsonCodeIn["v"];
+          if (i>=0 && i<System.Params.size()) {
+            System.Params[i].Value = val;
+            JsonCodeOut["i"] = i;
+            JsonCodeOut["v"] = val;
+          }
+        }
+        break;
+        case 7: { //Read ts
+          JsonCodeOut["v"] = System.T_S;
+        }
+        break;
+        case 8: { //write ts
+          double val = JsonCodeIn["v"];
+          System.T_S = val;
+          JsonCodeOut["v"] = System.T_S;
         }
         break;
       }
