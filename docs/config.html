@@ -48,6 +48,15 @@
       vertical-align: middle !important;
     }
 
+    td.min {
+      width: 1%;
+      white-space: nowrap;
+    }
+
+    .w3-select {
+      height: 40px;
+    }
+
     .w3-input {
       outline-width: 0;
     }
@@ -181,8 +190,8 @@
               <i class="fa-fw fas fa-caret-right" v-else></i>
               States
             </span>
-            <span class="w3-right" style="height: 100%;" @click="refreshStates" style="cursor: pointer;"><i
-                class="fa-fw fas fa-sync-alt"></i></span>
+            <span class="w3-right" style="height: 100%;" @click="refreshStates" style="cursor: pointer;"
+              v-if="isOpen()"><i class="fa-fw fas fa-sync-alt"></i></span>
           </div>
           <div v-if="display.states" class="w3-border w3-border-theme">
             <table class="w3-table-all w3-hoverable" v-if="states.length !== 0">
@@ -212,8 +221,8 @@
               <i class="fa-fw fas fa-caret-right" v-else></i>
               Parameters
             </span>
-            <span class="w3-right" style="height: 100%;" @click="refreshParams" style="cursor: pointer;"><i
-                class="fa-fw fas fa-sync-alt"></i></span>
+            <span class="w3-right" style="height: 100%;" @click="refreshParams" style="cursor: pointer;"
+              v-if="isOpen()"><i class="fa-fw fas fa-sync-alt"></i></span>
           </div>
           <div v-if="display.params" class="w3-border w3-border-theme">
             <table class="w3-table-all w3-hoverable" v-if="params.length !== 0">
@@ -228,18 +237,18 @@
                   <tr>
                     <td v-if="!!item && !!item.Name" v-html="item.Name"></td>
                     <template v-if="!!item && item.Value !== undefined && !item.editMode">
-                        <td  class="w3-right-align">
-                            {{item.Value}}</td>
-                            <td><i class="fa-fw fas fa-pen w3-text-purple" @click="editThis(idx)"></i></td>
+                      <td class="w3-right-align">
+                        {{item.Value}}</td>
+                      <td class="min"><i class="fa-fw fas fa-pen w3-text-purple"
+                            @click="editThis(idx)"></i></td>
                     </template>
                     <template v-if="!!item && item.Value !== undefined && !!item.editMode">
-                      <td class="w3-right-align"><input
-                          :value="item.Value" class="w3-input tbg" style="text-align: right;" type="number"></td>
-                          <td><i class="fa-fw fas fa-check w3-text-green"
-                            @click="updateParam($event, idx)"></i> <i class="fa-fw fas fa-times w3-text-red"
-                            @click="closeParamEdit(idx)"></i></td>
+                      <td class="w3-right-align"><input :id="'pEditItem'+idx" :value="item.Value" class="w3-input w3-border-theme tbg"
+                          style="text-align: right;" type="number"></td>
+                      <td  class="min"><i class="fa-fw fas fa-check w3-text-green" @click="updateParam($event, idx)"></i> <i
+                          class="fa-fw fas fa-times w3-text-red" @click="closeParamEdit(idx)"></i></td>
                     </template>
-                        
+
                   </tr>
                 </template>
               </tbody>
@@ -281,15 +290,17 @@
   </script>
 
   <script>
+    var conn;
     var app = new Vue({
       el: "#app",
       data: {
         updatingCunter: 0,
         temp: 0.1,
         browserSetup: false,
-        connection: null,
+        connection: false,
         SerialPorts: [],
         selectedPort: null,
+        SenderCtl: null,
         sPortItem: {},
         baudrate: 1500000,
         states: [],
@@ -309,13 +320,7 @@
       },
       watch: {
         selectedPort: function () {
-          if (!!SenderCtl) SenderCtl.setPort(this.selectedPort)
-          this.$nextTick(function () {
-            if (this.isOpen()) {
-              this.refreshAll();
-            }
-          })
-          
+          this.selectPortToSendingCommands();
         }
       },
       mounted: function () {
@@ -325,6 +330,14 @@
 
       },
       methods: {
+        selectPortToSendingCommands: function () {
+          if (!!this.SenderCtl) this.SenderCtl.setPort(this.selectedPort)
+          this.$nextTick(function () {
+            if (this.isOpen()) {
+              this.refreshAll();
+            }
+          })
+        },
         validSelectedPort: function () {
           for (var i = 0; i < this.SerialPorts.length; i++) {
             if (this.SerialPorts[i].Name === this.selectedPort) {
@@ -351,12 +364,12 @@
           this.refreshParams();
         },
         refreshStates: function () {
-          SenderCtl.appendCmd({
+          if (!!this.SenderCtl) this.SenderCtl.appendCmd({
             "A": 0
           });
         },
         refreshParams: function () {
-          SenderCtl.appendCmd({
+          if (!!this.SenderCtl) this.SenderCtl.appendCmd({
             "A": 3
           });
         },
@@ -365,18 +378,19 @@
             'editMode': true
           }));
         },
-        closeParamEdit: function(idx) {
+        closeParamEdit: function (idx) {
           app.$set(app.$data.params, idx, Object.assign(app.$data.params[idx], {
             'editMode': false
           }));
         },
         updateParam: function (evt, idx) {
           try {
-            SenderCtl.appendCmd({
+            if (!!this.SenderCtl) this.SenderCtl.appendCmd({
               "A": 6,
               "i": idx,
-              "v": parseFloat(evt.target.previousElementSibling.value)
+              "v": parseFloat (document.getElementById('pEditItem'+idx).value)
             });
+            delete this.params[idx].value;
           } catch (e) {
             console.log("error converting to double")
           }
@@ -386,130 +400,257 @@
       }
     });
 
-    var conn;
+    function connect() {
+      var SenderCtl = [];
+      conn = new WebSocket('ws://localhost:8989/ws');
+      conn.onopen = function () {
+        SenderCtl[0] = new sendController(conn);
+        app.selectPortToSendingCommands();
+        app.$set(app.$data, 'connection', true);
+        app.$set(app.$data, 'SenderCtl', SenderCtl[0]);
+      };
 
-    function checkThePlugin() {
-      //console.log("called");
-      if (!conn) {
-        //console.log("entered");
-        try {
-          conn = new WebSocket("ws://localhost:8989/ws");
-        } catch (e) {
+      conn.onmessage = function (evt) {
+        //console.log(evt.data);
+        if (!!evt.data) {
+          var recInfo;
+          try {
+            recInfo = JSON.parse(evt.data);
+          } catch (e) {
+            return;
+          }
+        }
+        if (!!recInfo.Hostname) {
+          app.$set(app.$data, 'connection', conn)
+          conn.send("list");
+          return;
+        };
+        if (!!recInfo.SerialPorts) {
+          app.$set(app.$data, 'SerialPorts', JSON.parse(evt.data).SerialPorts);
           return;
         }
-        conn.onclose = function (evt) {
-          conn = null;
-          app.$set(app.$data, 'connection', null);
-        }
-        conn.onmessage = function (evt) {
-          //console.log(evt.data);
-          if (!!evt.data) {
-            var recInfo;
-            try {
-              recInfo = JSON.parse(evt.data);
-            } catch (e) {
-              return;
-            }
-          }
-          if (!!recInfo.Hostname) {
-            app.$set(app.$data, 'connection', conn)
+        if (!!recInfo.Cmd) {
+          if (recInfo.Cmd === "Open") {
             conn.send("list");
-            return;
-          };
-          if (!!recInfo.SerialPorts) {
-            app.$set(app.$data, 'SerialPorts', JSON.parse(evt.data).SerialPorts);
+            SenderCtl[0].appendCmd({
+              "A": 0
+            });
+            SenderCtl[0].appendCmd({
+              "A": 3
+            });
             return;
           }
-          if (!!recInfo.Cmd) {
-            if (recInfo.Cmd === "Open") {
-              conn.send("list");
-              SenderCtl.appendCmd({
-                "A": 0
-              });
-              SenderCtl.appendCmd({
-                "A": 3
-              });
-              return;
-            }
-            if (recInfo.Cmd === "Close") {
-              conn.send("list");
-              app.$set(app.$data, 'sPortItem', null);
-              app.$set(app.$data, 'states', []);
-              app.$set(app.$data, 'params', []);
-              return;
-            }
-            if (recInfo.Cmd === "OpenFail" || recInfo.Cmd === "CloseFail") {
-              console.log("error: " + recInfo.Desc);
-              return;
-            }
-          } else if (!!recInfo.D && recInfo.P === app.$data.sPortItem.Name) {
-            var readCommand
-            try {
-              readCommand = JSON.parse(recInfo.D);
-            } catch (e) {
-              return;
-            }
-            isReadyToSend = true;
-            if (readCommand.B === undefined) return;
-            SenderCtl.commandExecuted();
-            switch (readCommand.B) {
-              case 0:
-                for (var i = 0; i < readCommand.v; i++) {
-                  SenderCtl.appendCmd({
-                    "A": 1,
-                    "i": i
-                  });
-                  SenderCtl.appendCmd({
-                    "A": 2,
-                    "i": i
-                  });
-                }
-                break;
-              case 1:
-                app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
-                  .states[readCommand.i] : {}), {
-                  "Name": readCommand.v
-                }));
-                break;
-              case 2:
-                app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
-                  .states[readCommand.i] : {}), {
-                  "Value": readCommand.v
-                }));
-                break;
-              case 3:
-                for (var i = 0; i < readCommand.v; i++) {
-                  SenderCtl.appendCmd({
-                    "A": 4,
-                    "i": i
-                  });
-                  SenderCtl.appendCmd({
-                    "A": 5,
-                    "i": i
-                  });
-                }
-                break;
-              case 4:
-                app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
-                  .params[readCommand.i] : {}), {
-                  "Name": readCommand.v
-                }));
-                break;
-              case 5:
-              case 6:
-                app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
-                  .params[readCommand.i] : {}), {
-                  "Value": parseFloat(readCommand.v)
-                }));
-                break;
-            }
+          if (recInfo.Cmd === "Close") {
+            conn.send("list");
+            app.$set(app.$data, 'sPortItem', null);
+            app.$set(app.$data, 'states', []);
+            app.$set(app.$data, 'params', []);
+            return;
+          }
+          if (recInfo.Cmd === "OpenFail" || recInfo.Cmd === "CloseFail") {
+            console.log("error: " + recInfo.Desc);
+            return;
+          }
+        } else if (!!recInfo.D && recInfo.P === app.$data.sPortItem.Name) {
+          var readCommand
+          try {
+            readCommand = JSON.parse(recInfo.D);
+          } catch (e) {
+            return;
+          }
+          isReadyToSend = true;
+          if (readCommand.B === undefined) return;
+          SenderCtl[0].commandExecuted();
+          switch (readCommand.B) {
+            case 0:
+              for (var i = 0; i < readCommand.v; i++) {
+                SenderCtl[0].appendCmd({
+                  "A": 1,
+                  "i": i
+                });
+                SenderCtl[0].appendCmd({
+                  "A": 2,
+                  "i": i
+                });
+              }
+              break;
+            case 1:
+              app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
+                .states[readCommand.i] : {}), {
+                "Name": readCommand.v
+              }));
+              break;
+            case 2:
+              app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
+                .states[readCommand.i] : {}), {
+                "Value": readCommand.v
+              }));
+              break;
+            case 3:
+              for (var i = 0; i < readCommand.v; i++) {
+                SenderCtl[0].appendCmd({
+                  "A": 4,
+                  "i": i
+                });
+                SenderCtl[0].appendCmd({
+                  "A": 5,
+                  "i": i
+                });
+              }
+              break;
+            case 4:
+              app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
+                .params[readCommand.i] : {}), {
+                "Name": readCommand.v
+              }));
+              break;
+            case 5:
+            case 6:
+              app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
+                .params[readCommand.i] : {}), {
+                "Value": parseFloat(readCommand.v)
+              }));
+              break;
           }
         }
       }
+
+      conn.onclose = function (e) {
+        app.$set(app.$data, 'connection', false);
+        setTimeout(function () {
+          connect();
+        }, 100);
+        SenderCtl[0].close();
+      };
+
+      conn.onerror = function (err) {
+        console.log('Socket encountered error: ', err.message, 'Closing socket');
+        conn.close();
+      };
     }
 
-    checkThePlugin();
-    var pluginTestingInterval = setInterval(checkThePlugin, 3000);
+    connect();
+
+    /*
+
+        function checkThePlugin() {
+          conn = new WebSocket("ws://localhost:8989/ws");
+          conn.onopen = function (evt) {
+            app.$set(app.$data, 'connection', true);
+          }
+          conn.onclose = function (evt) {
+            //conn = null;
+            app.$set(app.$data, 'connection', false);
+          }
+          conn.onmessage = function (evt) {
+            //console.log(evt.data);
+            if (!!evt.data) {
+              var recInfo;
+              try {
+                recInfo = JSON.parse(evt.data);
+              } catch (e) {
+                return;
+              }
+            }
+            if (!!recInfo.Hostname) {
+              app.$set(app.$data, 'connection', conn)
+              conn.send("list");
+              return;
+            };
+            if (!!recInfo.SerialPorts) {
+              app.$set(app.$data, 'SerialPorts', JSON.parse(evt.data).SerialPorts);
+              return;
+            }
+            if (!!recInfo.Cmd) {
+              if (recInfo.Cmd === "Open") {
+                conn.send("list");
+                SenderCtl.appendCmd({
+                  "A": 0
+                });
+                SenderCtl.appendCmd({
+                  "A": 3
+                });
+                return;
+              }
+              if (recInfo.Cmd === "Close") {
+                conn.send("list");
+                app.$set(app.$data, 'sPortItem', null);
+                app.$set(app.$data, 'states', []);
+                app.$set(app.$data, 'params', []);
+                return;
+              }
+              if (recInfo.Cmd === "OpenFail" || recInfo.Cmd === "CloseFail") {
+                console.log("error: " + recInfo.Desc);
+                return;
+              }
+            } else if (!!recInfo.D && recInfo.P === app.$data.sPortItem.Name) {
+              var readCommand
+              try {
+                readCommand = JSON.parse(recInfo.D);
+              } catch (e) {
+                return;
+              }
+              isReadyToSend = true;
+              if (readCommand.B === undefined) return;
+              SenderCtl.commandExecuted();
+              switch (readCommand.B) {
+                case 0:
+                  for (var i = 0; i < readCommand.v; i++) {
+                    SenderCtl.appendCmd({
+                      "A": 1,
+                      "i": i
+                    });
+                    SenderCtl.appendCmd({
+                      "A": 2,
+                      "i": i
+                    });
+                  }
+                  break;
+                case 1:
+                  app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
+                    .states[readCommand.i] : {}), {
+                    "Name": readCommand.v
+                  }));
+                  break;
+                case 2:
+                  app.$set(app.$data.states, readCommand.i, Object.assign((app.$data.states[readCommand.i] ? app.$data
+                    .states[readCommand.i] : {}), {
+                    "Value": readCommand.v
+                  }));
+                  break;
+                case 3:
+                  for (var i = 0; i < readCommand.v; i++) {
+                    SenderCtl.appendCmd({
+                      "A": 4,
+                      "i": i
+                    });
+                    SenderCtl.appendCmd({
+                      "A": 5,
+                      "i": i
+                    });
+                  }
+                  break;
+                case 4:
+                  app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
+                    .params[readCommand.i] : {}), {
+                    "Name": readCommand.v
+                  }));
+                  break;
+                case 5:
+                case 6:
+                  app.$set(app.$data.params, readCommand.i, Object.assign((app.$data.params[readCommand.i] ? app.$data
+                    .params[readCommand.i] : {}), {
+                    "Value": parseFloat(readCommand.v)
+                  }));
+                  break;
+              }
+            }
+          }
+        }
+
+
+        checkThePlugin();*/
+    //var pluginTestingInterval = setInterval(checkThePlugin, 3000);
   </script>
 
   <script>
@@ -525,19 +666,20 @@
   </script>
 
   <script>
-    var SenderCtl = new sendController (null, conn);
-    function sendController (cPort, sConn) {
+    //var SenderCtl;
+
+    function sendController(sConn) {
       var cmdQueue = [];
       var timeOut = 100;
       var readyToSend = false;
       var conn = sConn;
-      var port = cPort;
+      var port = null;
       this.sendControl = function () {
         if (readyToSend && cmdQueue.length > 0) {
           readyToSend = false;
           var cmd = cmdQueue[0];
           //console.log(cmd);
-          conn.send(`send ${port} ${JSON.stringify(cmd)}\0`);
+          conn.send(`send ${port} ${JSON.stringify(cmd)}`);
         }
       }
       this.appendCmd = function (cmd) {
@@ -554,11 +696,18 @@
       this.showCommandsQueue = function () {
         console.log(cmdQueue);
       }
-      setInterval(function (){readyToSend = true;}, 2000);
-      setInterval(this.sendControl, 100);
+      var TIForSendCommandAgain = setInterval(function () {
+        readyToSend = true;
+      }, 2000);
+      var SendCommandsAtRate = setInterval(this.sendControl, 100);
+      this.close = function () {
+        clearInterval(SendCommandsAtRate);
+        clearInterval(TIForSendCommandAgain);
+      }
     }
     var commandQueue = [];
     var isReadyToSend = true;
+
     function sendControl() {
       if (isReadyToSend && commandQueue.length > 0) {
         isReadyToSend = false;
