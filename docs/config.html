@@ -306,7 +306,7 @@
         states: [],
         params: [],
         display: {
-          "portInfo": true,
+          "portInfo": false,
           "params": true,
           "states": true,
           "inputs": true,
@@ -699,7 +699,8 @@
       var TIForSendCommandAgain = setInterval(function () {
         readyToSend = true;
       }, 2000);
-      var SendCommandsAtRate = setInterval(this.sendControl, 100);
+
+      var SendCommandsAtRate = setInterval(this.sendControl, 1);
       this.close = function () {
         clearInterval(SendCommandsAtRate);
         clearInterval(TIForSendCommandAgain);

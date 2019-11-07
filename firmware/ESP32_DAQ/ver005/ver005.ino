@@ -1,4 +1,3 @@
-#include "EEPROM.h"
 #include "gsk_model.h"
 
 void setup() {
